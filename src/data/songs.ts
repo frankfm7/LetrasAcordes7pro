@@ -1,551 +1,589 @@
-export interface Song {
-  id: number;
-  title: string;
-  artist: string;
-  category: string;
-  key: string;
-  tempo: string;
-  lyrics: string;
-  chords?: string;
-  favorite?: boolean;
-}
+import { Hymnal, Song } from '../types';
 
-export const categories = [
-  "Todas",
-  "Alabanza",
-  "Adoración",
-  "Himnos",
-  "Juventud",
-  "Navidad",
-  "Infantil",
+export const hymnals: Hymnal[] = [
+  {
+    id: 'alabanzas',
+    name: 'Alabanzas',
+    description: 'Canciones juveniles en castellano',
+    language: 'Castellano',
+    icon: '🎵',
+    color: '#a855f7',
+    isCustom: false,
+    codePrefix: 'A',
+  },
+  {
+    id: 'bautista',
+    name: 'Himnario Bautista',
+    description: 'Himnos tradicionales',
+    language: 'Castellano',
+    icon: '⛪',
+    color: '#3b82f6',
+    isCustom: false,
+    codePrefix: 'B',
+  },
+  {
+    id: 'cala',
+    name: 'Himnario Cala',
+    description: 'Bilingüe: Aymara / Castellano',
+    language: 'Aymara/Castellano',
+    icon: '🏔️',
+    color: '#10b981',
+    isCustom: false,
+    codePrefix: 'C',
+  },
+  {
+    id: 'quechua',
+    name: 'Himnario Quechua',
+    description: 'Himnos en Quechua',
+    language: 'Quechua',
+    icon: '🌿',
+    color: '#22c55e',
+    isCustom: false,
+    codePrefix: 'Q',
+  },
+  {
+    id: 'mis-canciones',
+    name: 'Mis Canciones',
+    description: 'Creaciones personales',
+    language: 'Castellano',
+    icon: '✍️',
+    color: '#f97316',
+    isCustom: true,
+    codePrefix: 'M',
+  },
 ];
 
 export const songs: Song[] = [
   {
-    id: 1,
-    title: "Grande es tu Fidelidad",
-    artist: "Himno Tradicional",
-    category: "Himnos",
-    key: "G",
-    tempo: "Moderato",
-    lyrics: `Grande es tu fidelidad,
-Dios mi Padre, no hay sombra de variación.
-No cambias Tú, Tú eres siempre el mismo,
-¡Grande es tu fidelidad!
+    id: 'a1',
+    title: 'Grande es el Señor',
+    artist: 'Marcos Witt',
+    code: 'A1',
+    number: 1,
+    hymnalId: 'alabanzas',
+    key: 'G',
+    timeSignature: '4/4',
+    bpm: 72,
+    language: 'Castellano',
+    categories: ['Adoración'],
+    sections: [],
+    lyrics: `INTRO
+//G   Em   C   D
 
-Grande es tu fidelidad,
-Grande es tu fidelidad,
-Cada mañana yo veo
-Nueva luz, nuevas bendiciones,
-¡Grande es tu fidelidad!
+VERSO 1
+//G            Em          C          D
+Grande es el Señor y digno de loar
+//G            Em          C          D
+más grande que todo lo que Él ha creado
+//G            Em          C          D
+Él es mi roca y mi salvación
+//G            Em          C          D
+Él es mi escudo y mi libertad
 
-Cuando el dolor viene a mi corazón,
-Cuando la prueba me viene a tentar,
-Tú me das fuerzas, Tú me das ánimo,
-¡Grande es tu fidelidad!
+CORO
+//C          D         Em         G
+Grande es el Señor y digno de loar
+//C          D         Em         C
+más grande que todo lo que Él ha creado
+//C          D         Em
+Él es mi roca y mi salvación
+//C          D         G
+Él es mi escudo y mi libertad
 
-Perdón de pecados, paz y consuelo,
-Tú me das siempre, mi Dios y Señor.
-Toda mi vida te quiero servir,
-¡Grande es tu fidelidad!`,
+VERSO 2
+//G          Em        C          D
+Él es la luz que alumbrará mi ser
+//G          Em        C          D
+Él es el pan que me sustentará
+//G          Em        C          D
+Él es el agua que me saciará
+//G          Em        C          D
+Él es el Señor que me salvará
+
+CORO
+//C          D         Em         G
+Grande es el Señor y digno de loar
+//C          D         Em         C
+más grande que todo lo que Él ha creado
+//C          D         Em
+Él es mi roca y mi salvación
+//C          D         G
+Él es mi escudo y mi libertad`,
+    notes: '',
   },
   {
-    id: 2,
-    title: "Renuévame",
-    artist: "Marcos Witt",
-    category: "Adoración",
-    key: "D",
-    tempo: "Lento",
-    lyrics: `Renuévame, Jesús,
-ya no quiero ser igual.
-Renuévame, Jesús,
-ya no quiero ser igual.
+    id: 'a2',
+    title: 'Renuévame',
+    artist: 'Marcos Witt',
+    code: 'A2',
+    hymnalId: 'alabanzas',
+    key: 'D',
+    timeSignature: '4/4',
+    bpm: 68,
+    language: 'Castellano',
+    categories: ['Adoración', 'Consagración'],
+    sections: [],
+    lyrics: `VERSO 1
+//D                A
+Renuévame, Señor Jesús
+//Bm             F#m
+Ya no quiero ser igual
+//G              A
+Renuévame, Señor Jesús
+//D              A
+Pon en mí tu corazón
 
-Quita de en medio de mí
-todo lo que no te agrada.
-Renuévame, Jesús,
-ya no quiero ser igual.
+CORO
+//G              D
+Porque todo lo que hay dentro de mí
+//A              Bm
+necesita ser cambiado, Señor
+//G              D
+Porque todo lo que hay dentro de mí
+//A              D
+necesita más de Ti
 
-Pon tus ojos en mí,
-mira mi corazón.
-Tú sabes que deseo ser mejor.
-Pon tus ojos en mí,
-mira mi corazón.
-Tú sabes que deseo ser mejor.
+VERSO 2
+//D                A
+Renuévame, Señor Jesús
+//Bm             F#m
+Quiero agradarte más
+//G              A
+Quiero caminar en Tu verdad
+//D              A
+Quiero vivir en santidad
 
-Renuévame, Jesús,
-ya no quiero ser igual.
-Renuévame, Jesús,
-ya no quiero ser igual.`,
+CORO
+//G              D
+Porque todo lo que hay dentro de mí
+//A              Bm
+necesita ser cambiado, Señor
+//G              D
+Porque todo lo que hay dentro de mí
+//A              D
+necesita más de Ti`,
+    notes: '',
   },
   {
-    id: 3,
-    title: "Al que está sentado en el trono",
-    artist: "Marcos Witt",
-    category: "Alabanza",
-    key: "A",
-    tempo: "Alegre",
-    lyrics: `Al que está sentado en el trono
-y al Cordero, sea la alabanza,
-el honor, la gloria y el poder,
-por los siglos de los siglos.
-
+    id: 'a3',
+    title: 'Al que está sentado en el trono',
+    artist: 'Marcos Witt',
+    code: 'A3',
+    hymnalId: 'alabanzas',
+    key: 'A',
+    timeSignature: '4/4',
+    bpm: 120,
+    language: 'Castellano',
+    categories: ['Alabanza', 'Adoración'],
+    sections: [],
+    lyrics: `VERSO 1
+//A                    E
 Al que está sentado en el trono
-y al Cordero, sea la alabanza,
-el honor, la gloria y el poder,
-por los siglos de los siglos. Amén.
+//F#m              E
+y al Cordero, sea la alabanza
+//A                E
+honra, gloria y poder por los siglos
+//F#m          E
+Amén, amén
 
-¡Aleluya! ¡Aleluya!
-¡Aleluya! ¡Aleluya!
-¡Aleluya! ¡Aleluya!
-¡Aleluya! ¡Aleluya!`,
+CORO
+//A        E        F#m
+Santo,   santo,   santo
+//D              E            A
+es el Señor Dios todo poderoso
+//A              E          F#m
+el que era, que es y que ha de venir
+//D              E            A
+el Señor Dios todo poderoso`,
+    notes: '',
   },
   {
-    id: 4,
-    title: "Dios es Bueno",
-    artist: "Jesús Adrián Romero",
-    category: "Alabanza",
-    key: "E",
-    tempo: "Moderato",
-    lyrics: `Dios es bueno, siempre es bueno,
-nunca deja de ser bueno.
-Dios es bueno, siempre es bueno,
-¡Dios es bueno!
+    id: 'a4',
+    title: 'Te exaltamos',
+    artist: 'Marcos Witt',
+    code: 'A4',
+    hymnalId: 'alabanzas',
+    key: 'E',
+    timeSignature: '4/4',
+    bpm: 130,
+    language: 'Castellano',
+    categories: ['Alabanza'],
+    sections: [],
+    lyrics: `VERSO 1
+//E              B
+Te exaltamos, te exaltamos
+//C#m            A
+Te exaltamos, Señor
+//E              B
+Te exaltamos, te exaltamos
+//C#m            A
+Te exaltamos, Señor
 
-Él es bueno, siempre es bueno,
-nunca deja de ser bueno.
-Él es bueno, siempre es bueno,
-¡Él es bueno!
-
-Porque su misericordia es para siempre,
-su amor es para siempre.
-Su fidelidad es para siempre,
-¡Él es bueno!
-
-Dios es bueno, siempre es bueno,
-nunca deja de ser bueno.
-Dios es bueno, siempre es bueno,
-¡Dios es bueno!`,
+CORO
+//E              B
+Porque tú eres grande
+//C#m            A
+Y porque tú eres santo
+//E              B
+Te alabamos, te alabamos
+//C#m            A
+Te alabamos, Señor`,
+    notes: '',
   },
   {
-    id: 5,
-    title: "Cuan Grande es Él",
-    artist: "Himno Tradicional",
-    category: "Himnos",
-    key: "G",
-    tempo: "Moderato",
-    lyrics: `Señor mi Dios, al contemplar los cielos,
-el firmamento y las estrellas mil,
-al oír tu voz en los potentes truenos,
-y ver brillar al sol en su cenit:
+    id: 'a5',
+    title: 'En los lugares secretos',
+    artist: 'Marcos Witt',
+    code: 'A5',
+    hymnalId: 'alabanzas',
+    key: 'D',
+    timeSignature: '4/4',
+    bpm: 66,
+    language: 'Castellano',
+    categories: ['Adoración', 'Intimidad'],
+    sections: [],
+    lyrics: `VERSO 1
+//D              A
+En los lugares secretos
+//Bm             G
+Yo me encuentro contigo
+//D              A
+En los lugares secretos
+//Bm             A
+Tú me hablas a mí
 
-Mi corazón entona la canción,
-¡Cuán grande es Él! ¡Cuán grande es Él!
-
-Al recorrer los montes y los valles,
-y ver las bellas flores al pasar,
-al escuchar el canto de las aves,
-y el arroyuelo en su murmurar:
-
-Mi corazón entona la canción,
-¡Cuán grande es Él! ¡Cuán grande es Él!
-
-Cuando yo pienso que Dios, su Hijo amado,
-no dudó en enviarnos a salvar,
-en una cruz murió por mis pecados,
-y así el cielo me pudo heredar:
-
-Mi corazón entona la canción,
-¡Cuán grande es Él! ¡Cuán grande es Él!`,
+CORO
+//G              D
+Y yo te busco, Señor
+//A              Bm
+Y yo te busco, Señor
+//G              D
+Porque tú eres mi todo
+//G              A
+Tú eres mi Dios`,
+    notes: '',
   },
   {
-    id: 6,
-    title: "Océanos",
-    artist: "Hillsong en Español",
-    category: "Adoración",
-    key: "D",
-    tempo: "Lento",
-    lyrics: `En medio de la tormenta
-cuando las aguas se levantan
-yo confío en Ti
+    id: 'b1',
+    title: 'Castillo Fuerte es Nuestro Dios',
+    artist: 'Martín Lutero',
+    code: 'B1',
+    hymnalId: 'bautista',
+    key: 'C',
+    timeSignature: '4/4',
+    bpm: 100,
+    language: 'Castellano',
+    categories: ['Himno', 'Batalla espiritual'],
+    sections: [],
+    lyrics: `VERSO 1
+//C          G          C          F
+Castillo  fuerte es nuestro  Dios
+//C          G          C
+baluarte y  espada
+//F          C          G
+Con su poder  maravilloso
+//F          G          C
+nos defiende en la batalla
 
-En medio de la noche
-cuando las sombras me rodean
-yo confío en Ti
+VERSO 2
+//C              G          C
+Nuestro antiguo enemigo
+//C              G          C
+busca hacernos mal
+//F              C          G
+astucia y poder tiene él
+//F              G          C
+no hay otro igual en la tierra
 
-Llámame sobre las aguas
-donde mis pies puedan fallar
-ahí yo te seguiré
-
-Mi corazón confiará en Ti
-porque Tú eres fiel
-
-Tú me llamas sobre las aguas
-donde mis pies pueden fallar
-y ahí te seguiré
-
-Mi corazón confiará en Ti
-porque Tú eres fiel`,
+CORO
+//F              C          G
+Y nuestro príncipe eterno
+//F              C
+que es Cristo el Señor
+//F              G          C
+con su poder y su fuerza
+//F              G          C
+la victoria nos dio`,
+    notes: '',
   },
   {
-    id: 7,
-    title: "Tu Fidelidad es Grande",
-    artist: "Hillsong en Español",
-    category: "Adoración",
-    key: "G",
-    tempo: "Lento",
-    lyrics: `Tu fidelidad es grande, oh Dios
-Tu fidelidad es grande, oh Dios
-Nunca cambias, nunca fallas
-Tu fidelidad es grande
+    id: 'b2',
+    title: 'Sublime Gracia',
+    artist: 'John Newton',
+    code: 'B2',
+    hymnalId: 'bautista',
+    key: 'G',
+    timeSignature: '3/4',
+    bpm: 80,
+    language: 'Castellano',
+    categories: ['Himno', 'Gracia'],
+    sections: [],
+    lyrics: `VERSO 1
+//G          G7         C
+Sublime gracia del Señor
+//G          Em         B7
+que a un infeliz salvó
+//Em         C          G
+fui ciego mas me hizo ver
+//D          D7         G
+estaba muerto y viví
 
-Las montañas pueden caer
-y los mares pueden secarse
-pero tu amor por mí
-siempre será el mismo
-
-Tu fidelidad es grande, oh Dios
-Tu fidelidad es grande, oh Dios
-Nunca cambias, nunca fallas
-Tu fidelidad es grande`,
+VERSO 2
+//G          G7         C
+Su gracia me enseñó a temer
+//G          Em         B7
+mis ojos la pudieron ver
+//Em         C          G
+y por su gracia hoy soy feliz
+//D          D7         G
+y por su gracia soy libre`,
+    notes: '',
   },
   {
-    id: 8,
-    title: "No hay Dios tan grande como Tú",
-    artist: "Alabanza Infantil",
-    category: "Infantil",
-    key: "C",
-    tempo: "Alegre",
-    lyrics: `No hay Dios tan grande como Tú,
-no hay Dios tan grande como Tú,
-no hay Dios tan grande como Tú,
-Señor, no hay Dios tan grande como Tú.
+    id: 'b3',
+    title: 'Cuán Grande es Él',
+    artist: 'Carl Boberg',
+    code: 'B3',
+    hymnalId: 'bautista',
+    key: 'D',
+    timeSignature: '3/4',
+    bpm: 76,
+    language: 'Castellano',
+    categories: ['Himno', 'Adoración'],
+    sections: [],
+    lyrics: `VERSO 1
+//D              G          D          A
+Señor mi Dios, al contemplar los cielos
+//D              G          D
+el firmamento y las estrellas mil
+//A              D          G          D
+oyendo tu voz en los potentes truenos
+//A              A7         D
+y viendo obrar a Ti en su gir el sol
 
-Y por eso yo te amo,
-y por eso yo te adoro,
-y por eso yo te doy
-mi corazón.
-
-No hay Dios tan grande como Tú,
-no hay Dios tan grande como Tú,
-no hay Dios tan grande como Tú,
-Señor, no hay Dios tan grande como Tú.`,
+CORO
+//G              D          A          D
+Cantando entonces yo me gloriaré
+//G              D          A          D
+Cuán grande es Él, cuán grande es Él
+//G              D          A          D
+Cantando entonces yo me gloriaré
+//G              D          A          D
+Cuán grande es Él, cuán grande es Él`,
+    notes: '',
   },
   {
-    id: 9,
-    title: "Un día viviré",
-    artist: "Marcos Witt",
-    category: "Juventud",
-    key: "D",
-    tempo: "Moderato",
-    lyrics: `Un día viviré en la presencia del Señor,
-un día viviré en la presencia del Señor.
-Y por la eternidad cantaré,
-y por la eternidad cantaré.
+    id: 'b4',
+    title: 'Mi Esperanza es el Señor',
+    artist: 'Himnario Bautista',
+    code: 'B4',
+    hymnalId: 'bautista',
+    key: 'F',
+    timeSignature: '3/4',
+    bpm: 72,
+    language: 'Castellano',
+    categories: ['Himno', 'Esperanza'],
+    sections: [],
+    lyrics: `VERSO 1
+//F              C
+Mi esperanza es el Señor
+//F              C
+mi roca y mi salvación
+//Bb             F          C
+Él es mi refugio
+//Gm             C          F
+mi torre fortaleza
 
-Un día viviré en la presencia del Señor,
-un día viviré en la presencia del Señor.
-Y por la eternidad cantaré,
-y por la eternidad cantaré.
-
-¡Aleluya! ¡Aleluya!
-¡Aleluya! ¡Aleluya!
-
-Un día viviré en la presencia del Señor,
-un día viviré en la presencia del Señor.`,
+CORO
+//Bb             F
+Mi esperanza es Él
+//C              F
+mi esperanza es Él
+//Bb             F
+Mi esperanza es el Señor
+//Gm             C          F
+mi esperanza es Él`,
+    notes: '',
   },
   {
-    id: 10,
-    title: "Noche de Paz",
-    artist: "Villancico Tradicional",
-    category: "Navidad",
-    key: "C",
-    tempo: "Lento",
-    lyrics: `Noche de paz, noche de amor,
-todo duerme en derredor.
-Entre los astros que esparcen su luz,
-bela anunciando al niñito Jesús,
-brilla la estrella de paz,
-brilla la estrella de paz.
+    id: 'c1',
+    title: "Jach'a Apu Dios / Gran Dios Padre",
+    artist: 'Himnario Cala',
+    code: 'C1',
+    hymnalId: 'cala',
+    key: 'Am',
+    timeSignature: '4/4',
+    bpm: 80,
+    language: 'Aymara/Castellano',
+    categories: ['Himno', 'Adoración'],
+    sections: [],
+    lyrics: `VERSO 1
+//Am             Em
+Jach'a Apu Dios, jiwasan Tatana
+//Am             Em
+Jach'a Apu Dios, jiwasan Mamana
+//Dm             Am         E
+Jach'a Apu Dios, jiwasan Apuna
+//Dm             Am         E
+Jach'a Apu Dios, jiwasan Chuymanana
 
-Noche de paz, noche de amor,
-en los campos a Belén
-los pastores van al buen Redentor,
-con los ángeles cantando su amor,
-¡Gloria al que ha de nacer!
-¡Gloria al que ha de nacer!
+CORO
+//F              Am
+Jilïri Apunakana
+//F              Am
+Wali ch'ama Apunakana
+//F              Am
+Jilïri Apunakana
+//E              Am
+Wali ch'ama Apunakana`,
+    lyricsByLanguage: {
+      'Aymara': `VERSO 1
+//Am             Em
+Jach'a Apu Dios, jiwasan Tatana
+//Am             Em
+Jach'a Apu Dios, jiwasan Mamana
 
-Noche de paz, noche de amor,
-oye humilde fiel pastor
-los coros celestiales que anuncian salud,
-gracias y glorias en gran plenitud,
-por nuestro buen Redentor,
-por nuestro buen Redentor.`,
+CORO
+//F              Am
+Jilïri Apunakana
+//F              Am
+Wali ch'ama Apunakana`,
+      'Castellano': `VERSO 1
+//Am             Em
+Gran Dios Padre, nuestro Creador
+//Am             Em
+Gran Dios Padre, nuestra Madre
+
+CORO
+//F              Am
+Príncipe de los dioses
+//F              Am
+Muy poderoso dios`,
+    },
+    notes: '',
   },
   {
-    id: 11,
-    title: "Eres Todopoderoso",
-    artist: "Marcos Witt",
-    category: "Alabanza",
-    key: "G",
-    tempo: "Alegre",
-    lyrics: `Eres todopoderoso,
-eres todopoderoso,
-eres todopoderoso,
-Señor.
+    id: 'c2',
+    title: 'Diosaruxa Aruskipañani / Hablemos de Dios',
+    artist: 'Himnario Cala',
+    code: 'C2',
+    hymnalId: 'cala',
+    key: 'G',
+    timeSignature: '4/4',
+    bpm: 90,
+    language: 'Aymara',
+    categories: ['Himno', 'Testimonio'],
+    sections: [],
+    lyrics: `VERSO 1
+//G
+Diosaruxa aruskipañani
+//Em
+Diosaruxa aruskipañani
+//C              D
+Waliki Diosan sarnaqañani
 
-Eres todopoderoso,
-eres todopoderoso,
-eres todopoderoso,
-Señor.
-
-¡Aleluya! ¡Aleluya!
-¡Aleluya! ¡Aleluya!
-
-Eres todopoderoso,
-eres todopoderoso,
-eres todopoderoso,
-Señor.`,
+CORO
+//G              Em
+Diosan munapaja
+//C              D
+Diosan munapaja
+//G              Em
+Diosan munapaja
+//C              D
+Diosan munapaja`,
+    notes: '',
   },
   {
-    id: 12,
-    title: "Te amo",
-    artist: "Jesús Adrián Romero",
-    category: "Adoración",
-    key: "A",
-    tempo: "Lento",
-    lyrics: `Te amo, te amo, te amo,
-te amo, te amo, te amo.
-Te amo, te amo, te amo,
-Señor, te amo.
+    id: 'q1',
+    title: 'Taytanchis Dios / Nuestro Padre Dios',
+    artist: 'Himnario Quechua',
+    code: 'Q1',
+    hymnalId: 'quechua',
+    key: 'D',
+    timeSignature: '4/4',
+    bpm: 84,
+    language: 'Quechua',
+    categories: ['Himno', 'Adoración'],
+    sections: [],
+    lyrics: `VERSO 1
+//D              A          Bm         F#m
+Taytanchis Dios, ñuqanchis Tayta
+//G              D          A          D
+Taytanchis Dios, ñuqanchis Mama
 
-Yo te amo más que a la luz del sol,
-yo te amo más que a la luna y las estrellas.
-Yo te amo más que al aire que respiro,
-yo te amo, yo te amo, yo te amo, Señor.
-
-Te amo, te amo, te amo,
-te amo, te amo, te amo.
-Te amo, te amo, te amo,
-Señor, te amo.`,
+CORO
+//G              D
+Hatun Diosninchis
+//A              Bm
+Hatun Diosninchis
+//G              D
+Hatun Diosninchis
+//A              D
+Hatun Diosninchis`,
+    notes: '',
   },
   {
-    id: 13,
-    title: "Arrebatado",
-    artist: "Marcos Witt",
-    category: "Juventud",
-    key: "E",
-    tempo: "Alegre",
-    lyrics: `¡Aleluya! ¡Aleluya!
-¡Aleluya! ¡Aleluya!
+    id: 'q2',
+    title: 'Yayayku Dios / Padre Dios',
+    artist: 'Himnario Quechua',
+    code: 'Q2',
+    hymnalId: 'quechua',
+    key: 'G',
+    timeSignature: '3/4',
+    bpm: 76,
+    language: 'Quechua',
+    categories: ['Himno', 'Adoración'],
+    sections: [],
+    lyrics: `VERSO 1
+//G              D          Em         C
+Yayayku Dios, sumaq Diosnillay
+//G              D          Em         C
+Yayayku Dios, sumaq Diosnillay
+//Am             D          G
+Kuyawayku Dios, kuyawayku
 
-Arrebatado, estoy arrebatado,
-por tu amor, por tu amor.
-Arrebatado, estoy arrebatado,
-por tu amor, por tu amor.
-
-Cuando pienso en tu amor,
-cuando pienso en tu cruz,
-cuando pienso en tu gracia,
-me arrebato de amor.
-
-Arrebatado, estoy arrebatado,
-por tu amor, por tu amor.
-Arrebatado, estoy arrebatado,
-por tu amor, por tu amor.`,
+CORO
+//C              G
+Alabayku Dios
+//D              Em
+Graciayku Dios
+//C              G
+Alabayku Dios
+//D              G
+Graciayku Dios`,
+    notes: '',
   },
   {
-    id: 14,
-    title: "Castillo Fuerte",
-    artist: "Martín Lutero",
-    category: "Himnos",
-    key: "D",
-    tempo: "Moderato",
-    lyrics: `Castillo fuerte es nuestro Dios,
-defensa y buen escudo;
-con su poder nos librará
-en este trance rudo.
+    id: 'm1',
+    title: 'Tu Fidelidad',
+    artist: 'Personal',
+    code: 'M1',
+    hymnalId: 'mis-canciones',
+    key: 'C',
+    timeSignature: '4/4',
+    bpm: 70,
+    language: 'Castellano',
+    categories: ['Adoración', 'Fidelidad'],
+    sections: [],
+    lyrics: `VERSO 1
+//C              Am
+Tu fidelidad, Señor
+//F              C
+es grande y eterna
+//G              Am
+Tu amor no falla jamás
+//F              G
+Tu gracia me sostendrá
 
-Con furia y con afán
-acósanos Satán,
-por armas deja ver
-astucia y gran poder;
-cual no hay en la tierra igual.
-
-Nuestro valor es nada,
-pronto seremos vencidos;
-mas por nosotros peleará
-el elegido Cristo.
-
-Y si nos han de tragar
-los demonios sin piedad,
-no temeremos nosotros,
-pues ya está condenado;
-
-El príncipe infernal
-que el juicio sufrirá;
-una palabra bastará
-que a él ha de espantar.`,
-  },
-  {
-    id: 15,
-    title: "Dios Todopoderoso",
-    artist: "Alabanza Congregacional",
-    category: "Alabanza",
-    key: "G",
-    tempo: "Moderato",
-    lyrics: `Dios todopoderoso,
-Dios todopoderoso,
-Dios todopoderoso,
-¡Aleluya!
-
-Dios todopoderoso,
-Dios todopoderoso,
-Dios todopoderoso,
-¡Aleluya!
-
-¡Aleluya! ¡Aleluya!
-¡Aleluya! ¡Aleluya!
-
-Dios todopoderoso,
-Dios todopoderoso,
-Dios todopoderoso,
-¡Aleluya!`,
-  },
-  {
-    id: 16,
-    title: "Alas de Águila",
-    artist: "Marcos Witt",
-    category: "Adoración",
-    key: "D",
-    tempo: "Lento",
-    lyrics: `Los que esperan en Jehová tendrán nuevas fuerzas,
-levantarán alas como las águilas.
-Correrán y no se cansarán,
-caminarán y no se fatigarán.
-
-Levanta alas de águila,
-levanta alas de águila,
-levántate y vuela alto,
-levanta alas de águila.
-
-Los que esperan en Jehová tendrán nuevas fuerzas,
-levantarán alas como las águilas.
-Correrán y no se cansarán,
-caminarán y no se fatigarán.
-
-Levanta alas de águila,
-levanta alas de águila,
-levántate y vuela alto,
-levanta alas de águila.`,
-  },
-  {
-    id: 17,
-    title: "Mi Dios es Tan Grande",
-    artist: "Alabanza Infantil",
-    category: "Infantil",
-    key: "C",
-    tempo: "Alegre",
-    lyrics: `Mi Dios es tan grande,
-tan fuerte y tan poderoso.
-Mi Dios es tan grande,
-tan fuerte y tan poderoso.
-
-No hay nadie como Él,
-no hay nadie como Él,
-no hay nadie como Él,
-en la tierra ni en el cielo.
-
-Mi Dios es tan grande,
-tan fuerte y tan poderoso.
-Mi Dios es tan grande,
-tan fuerte y tan poderoso.
-
-No hay nadie como Él,
-no hay nadie como Él,
-no hay nadie como Él,
-en la tierra ni en el cielo.`,
-  },
-  {
-    id: 18,
-    title: "Campana sobre campana",
-    artist: "Villancico Tradicional",
-    category: "Navidad",
-    key: "G",
-    tempo: "Alegre",
-    lyrics: `Campana sobre campana,
-sobre campana y una más,
-asómate y verás al Niño en la cuna.
-
-Belén, campanas de Belén,
-que los ángeles tocan,
-¿qué nueva me traéis?
-
-Campana sobre campana,
-sobre campana y una más,
-asómate y verás al Niño en la cuna.
-
-Recoge tu rebaño,
-pastor, y vamos a Belén
-a adorar al Niño que ha nacido.
-
-Belén, campanas de Belén,
-que los ángeles tocan,
-¿qué nueva me traéis?`,
-  },
-  {
-    id: 19,
-    title: "En la Cruz",
-    artist: "Himno Tradicional",
-    category: "Himnos",
-    key: "D",
-    tempo: "Lento",
-    lyrics: `En la cruz, en la cruz, do primero la vi,
-del amado Jesús, yo creí y fui feliz.
-En la cruz, en la cruz, do primero la vi,
-del amado Jesús, yo creí y fui feliz.
-
-En la cruz, do mi Salvador murió,
-por el mundo pecador, yo me humillo.
-En la cruz, do mi Salvador murió,
-por el mundo pecador, yo me humillo.
-
-Yo seré siempre fiel a la cruz,
-y desprecio su afrenta y baldón.
-Yo seré siempre fiel a la cruz,
-y desprecio su afrenta y baldón.
-
-Y al final, cuando en gloria esté,
-la corona tendré, por la cruz.
-Y al final, cuando en gloria esté,
-la corona tendré, por la cruz.`,
-  },
-  {
-    id: 20,
-    title: "Cristo es Suficiente",
-    artist: "Jesús Adrián Romero",
-    category: "Adoración",
-    key: "A",
-    tempo: "Moderato",
-    lyrics: `Cristo es suficiente,
-Cristo es suficiente,
-Cristo es suficiente para mí.
-
-Su gracia es suficiente,
-su gracia es suficiente,
-su gracia es suficiente para mí.
-
-Cristo es suficiente,
-Cristo es suficiente,
-Cristo es suficiente para mí.
-
-En Él tengo todo,
-en Él tengo paz,
-en Él tengo gozo,
-en Él tengo amor.
-
-Cristo es suficiente,
-Cristo es suficiente,
-Cristo es suficiente para mí.`,
+CORO
+//C              Am
+Grande es tu fidelidad
+//F              C
+Grande es tu fidelidad
+//G              Am
+Cada mañana nueva es
+//F              G
+Tu gracia, Señor`,
+    notes: '',
   },
 ];
