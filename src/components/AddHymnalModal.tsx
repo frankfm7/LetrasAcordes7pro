@@ -1,19 +1,41 @@
 import { useState } from 'react';
 import { Hymnal } from '../types';
 import { useApp } from '../context/AppContext';
-import { X, Check } from 'lucide-react';
+import { X, Check, Image } from 'lucide-react';
 
 const ICONS = ['🎵', '🎶', '🎸', '🎹', '🥁', '🎺', '🎻', '🎤', '⛪', '🏔️', '🌿', '✍️', '📖', '🕊️', '⭐', '🌟', '🎼', '🎯', '❤️', '🔥'];
 const COLORS = ['#a855f7', '#3b82f6', '#10b981', '#22c55e', '#f97316', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4', '#f59e0b', '#6366f1', '#14b8a6'];
+const LANGUAGES = ['Castellano', 'Aymara', 'Quechua', 'Inglés', 'Portugués', 'Francés', 'Italiano', 'Alemán'];
 
 export default function AddHymnalModal({ onClose }: { onClose: () => void }) {
   const { addCustomHymnal } = useApp();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [language, setLanguage] = useState('Castellano');
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['Castellano']);
   const [icon, setIcon] = useState('🎵');
   const [color, setColor] = useState('#a855f7');
   const [codePrefix, setCodePrefix] = useState('');
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCoverImage(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const toggleLanguage = (lang: string) => {
+    if (selectedLanguages.includes(lang)) {
+      if (selectedLanguages.length > 1) {
+        setSelectedLanguages(selectedLanguages.filter(l => l !== lang));
+      }
+    } else {
+      setSelectedLanguages([...selectedLanguages, lang]);
+    }
+  };
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -22,11 +44,12 @@ export default function AddHymnalModal({ onClose }: { onClose: () => void }) {
       id: `custom-${Date.now()}`,
       name: name.trim(),
       description: description.trim(),
-      language,
+      language: selectedLanguages.join('/'),
       icon,
       color,
       isCustom: true,
       codePrefix: prefix,
+      image: coverImage || undefined,
     };
     addCustomHymnal(newHymnal);
     onClose();
@@ -41,6 +64,28 @@ export default function AddHymnalModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-4">
+          {/* Imagen de portada */}
+          <div>
+            <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Imagen de Portada</label>
+            {coverImage ? (
+              <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: '3/4' }}>
+                <img src={coverImage} alt="Portada" className="w-full h-full object-cover" />
+                <button onClick={() => setCoverImage(null)} className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70">
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <label className="cursor-pointer">
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <div className="rounded-xl border-2 border-dashed p-6 text-center transition-all hover:border-opacity-70" style={{ borderColor: 'var(--border-color)', aspectRatio: '3/4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <Image size={40} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                  <p className="text-sm font-medium">Click para subir imagen</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Opcional - reemplaza el color de fondo</p>
+                </div>
+              </label>
+            )}
+          </div>
+
           <div>
             <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Nombre *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Himnario Pentecostal"
@@ -54,11 +99,21 @@ export default function AddHymnalModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Idioma</label>
-            <select value={language} onChange={e => setLanguage(e.target.value)}
-                    className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}>
-              <option>Castellano</option><option>Aymara</option><option>Quechua</option><option>Portugués</option><option>Inglés</option><option>Bilingüe</option>
-            </select>
+            <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Idiomas (selección múltiple)</label>
+            <div className="flex flex-wrap gap-2">
+              {LANGUAGES.map(lang => (
+                <button key={lang} onClick={() => toggleLanguage(lang)}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                        style={{
+                          backgroundColor: selectedLanguages.includes(lang) ? 'var(--accent)' : 'var(--bg-tertiary)',
+                          color: selectedLanguages.includes(lang) ? 'white' : 'var(--text-primary)',
+                          border: selectedLanguages.includes(lang) ? '2px solid var(--accent)' : '2px solid transparent'
+                        }}>
+                  {selectedLanguages.includes(lang) && <Check size={12} className="inline mr-1" />}
+                  {lang}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -94,10 +149,15 @@ export default function AddHymnalModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Preview */}
-          <div className="rounded-xl p-4" style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)`, boxShadow: `0 8px 24px ${color}66` }}>
+          <div className="rounded-xl p-4" style={{ 
+            background: coverImage 
+              ? `linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${coverImage}) center/cover`
+              : `linear-gradient(135deg, ${color}, ${color}cc)`, 
+            boxShadow: `0 8px 24px ${color}66` 
+          }}>
             <div className="text-4xl mb-2">{icon}</div>
             <div className="text-white font-bold text-lg" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{name || 'Nombre del himnario'}</div>
-            <div className="text-white/70 text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{language}</div>
+            <div className="text-white/70 text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{selectedLanguages.join('/')}</div>
           </div>
 
           <div className="flex gap-2">

@@ -1,12 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 
-const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const NOTE_FREQUENCIES: Record<string, number> = {
-  'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13,
-  'E': 329.63, 'F': 349.23, 'F#': 369.99, 'G': 392.00,
-  'G#': 415.30, 'A': 440.00, 'A#': 466.16, 'B': 493.88
+const INSTRUMENTS = {
+  guitar: {
+    name: '🎸 Guitarra',
+    strings: ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+    frequencies: [82.41, 110.00, 146.83, 196.00, 246.94, 329.63]
+  },
+  bass: {
+    name: '🎸 Bajo',
+    strings: ['E1', 'A1', 'D2', 'G2'],
+    frequencies: [41.20, 55.00, 73.42, 98.00]
+  },
+  ukulele: {
+    name: '🎻 Ukelele',
+    strings: ['G4', 'C4', 'E4', 'A4'],
+    frequencies: [392.00, 261.63, 329.63, 440.00]
+  }
 };
+
+const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 export default function Tuner() {
   const [isListening, setIsListening] = useState(false);
@@ -14,6 +27,7 @@ export default function Tuner() {
   const [frequency, setFrequency] = useState<number | null>(null);
   const [cents, setCents] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [selectedInstrument, setSelectedInstrument] = useState<'guitar' | 'bass' | 'ukulele'>('guitar');
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -38,7 +52,7 @@ export default function Tuner() {
       setIsListening(true);
       detectPitch();
     } catch (err) {
-      setError('No se pudo acceder al micrófono. Verifica los permisos.');
+      setError('No se pudo acceder al micrófono');
       console.error(err);
     }
   };
@@ -65,11 +79,9 @@ export default function Tuner() {
     const buffer = new Float32Array(analyser.fftSize);
     analyser.getFloatTimeDomainData(buffer);
 
-    // Simple autocorrelation pitch detection
     const rms = Math.sqrt(buffer.reduce((sum, val) => sum + val * val, 0) / buffer.length);
     
     if (rms > 0.01) {
-      // Find pitch using autocorrelation
       let correlations = new Array(buffer.length).fill(0);
       for (let i = 0; i < buffer.length; i++) {
         for (let j = 0; j < buffer.length - i; j++) {
@@ -77,7 +89,6 @@ export default function Tuner() {
         }
       }
 
-      // Find the first peak after the initial decline
       let foundPeak = false;
       let peakIndex = 0;
       for (let i = 1; i < correlations.length; i++) {
@@ -95,11 +106,11 @@ export default function Tuner() {
         if (freq > 50 && freq < 2000) {
           setFrequency(freq);
           
-          // Find closest note
+          // Encontrar la nota más cercana
           let closestNote = NOTES[0];
           let minDiff = Infinity;
           NOTES.forEach(note => {
-            const noteFreq = NOTE_FREQUENCIES[note];
+            const noteFreq = getNoteFrequency(note);
             const diff = Math.abs(freq - noteFreq);
             if (diff < minDiff) {
               minDiff = diff;
@@ -109,8 +120,7 @@ export default function Tuner() {
           
           setDetectedNote(closestNote);
           
-          // Calculate cents
-          const noteFreq = NOTE_FREQUENCIES[closestNote];
+          const noteFreq = getNoteFrequency(closestNote);
           const centsDiff = 1200 * Math.log2(freq / noteFreq);
           setCents(Math.round(centsDiff));
         }
@@ -118,6 +128,13 @@ export default function Tuner() {
     }
 
     animationRef.current = requestAnimationFrame(detectPitch);
+  };
+
+  const getNoteFrequency = (note: string): number => {
+    const noteIndex = NOTES.indexOf(note.replace(/\d/, ''));
+    if (noteIndex === -1) return 440;
+    const octave = parseInt(note.slice(-1)) || 4;
+    return 440 * Math.pow(2, (noteIndex - 9) / 12 + (octave - 4));
   };
 
   useEffect(() => {
@@ -133,6 +150,7 @@ export default function Tuner() {
   };
 
   const status = getTuningStatus();
+  const instrument = INSTRUMENTS[selectedInstrument];
 
   return (
     <div className="rounded-2xl border p-6" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
@@ -143,6 +161,23 @@ export default function Tuner() {
           {error}
         </div>
       )}
+
+      {/* Instrument selector */}
+      <div className="mb-6">
+        <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Instrumento</label>
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.keys(INSTRUMENTS) as Array<keyof typeof INSTRUMENTS>).map(inst => (
+            <button key={inst} onClick={() => setSelectedInstrument(inst)}
+                    className="py-3 rounded-xl text-sm font-bold transition-all"
+                    style={{
+                      backgroundColor: selectedInstrument === inst ? 'var(--accent)' : 'var(--bg-tertiary)',
+                      color: selectedInstrument === inst ? 'white' : 'var(--text-primary)'
+                    }}>
+              {INSTRUMENTS[inst].name}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="text-center mb-6">
         <div className="text-7xl font-black mb-2" style={{ color: detectedNote ? 'var(--accent)' : 'var(--text-muted)' }}>
@@ -183,14 +218,14 @@ export default function Tuner() {
         </div>
       )}
 
-      {/* Reference frequencies */}
+      {/* Reference strings */}
       <div className="mb-6">
-        <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Frecuencias de referencia</label>
-        <div className="grid grid-cols-4 gap-2">
-          {NOTES.slice(0, 8).map(note => (
-            <div key={note} className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-              <div className="font-bold text-sm">{note}</div>
-              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{NOTE_FREQUENCIES[note].toFixed(0)} Hz</div>
+        <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Cuerdas de referencia</label>
+        <div className="grid grid-cols-3 gap-2">
+          {instrument.strings.map((string, i) => (
+            <div key={i} className="text-center p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+              <div className="font-bold text-lg">{string}</div>
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{instrument.frequencies[i].toFixed(1)} Hz</div>
             </div>
           ))}
         </div>
@@ -205,7 +240,7 @@ export default function Tuner() {
 
       {isListening && (
         <p className="text-xs text-center mt-3" style={{ color: 'var(--text-muted)' }}>
-          Toca una nota cerca del micrófono
+          Toca una cuerda cerca del micrófono
         </p>
       )}
     </div>
