@@ -315,12 +315,38 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
   const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  
+  // Estados para el sistema de 4 botones de transposición
+  const [customKeys, setCustomKeys] = useState<{ key1: string | null; key2: string | null; key3: string | null }>({ key1: null, key2: null, key3: null });
+  const [showKeySelector, setShowKeySelector] = useState(false);
+  const [editingButton, setEditingButton] = useState<1 | 2 | 3 | null>(null);
+  const [selectedNote, setSelectedNote] = useState('C');
+  const [selectedIsMinor, setSelectedIsMinor] = useState(false);
+  const longPressTimerRef = useRef<number | null>(null);
 
   const song = useMemo(() => {
     const customSong = state.customSongs.find(s => s.id === initialSong.id);
     return customSong || initialSong;
   }, [initialSong, state.customSongs]);
   const { preferences } = state;
+
+  // Cargar claves personalizadas desde localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(`song-keys-${song.id}`);
+    if (saved) {
+      try {
+        setCustomKeys(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error loading custom keys:', e);
+      }
+    }
+  }, [song.id]);
+
+  // Guardar claves personalizadas en localStorage
+  const saveCustomKeys = (keys: { key1: string | null; key2: string | null; key3: string | null }) => {
+    setCustomKeys(keys);
+    localStorage.setItem(`song-keys-${song.id}`, JSON.stringify(keys));
+  };
 
   const transposedLyrics = useMemo(() => {
     let lyrics = song.lyricsByLanguage?.[currentLanguage] || song.lyrics;
@@ -388,6 +414,72 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
     setShowEditKeysModal(false); setEditingKeySlot(null); setIsMinor(false);
   };
 
+  // Funciones para el sistema de 4 botones de transposición
+  const handleKeyButtonClick = (buttonIndex: 0 | 1 | 2 | 3, key: string | null) => {
+    if (buttonIndex === 0) {
+      // Botón 1: Tono original
+      setActiveKey(null);
+      setTransposition(0);
+    } else {
+      // Botones 2, 3, 4: Aplicar tono personalizado
+      setActiveKey(key);
+      if (key) {
+        const baseKey = key.replace(/m$/, '');
+        const baseOriginalKey = song.key.replace(/m$/, '');
+        const originalIndex = allNotes.indexOf(baseOriginalKey);
+        const newIndex = allNotes.indexOf(baseKey);
+        if (originalIndex !== -1 && newIndex !== -1) {
+          setTransposition(newIndex - originalIndex);
+        }
+      }
+    }
+  };
+
+  const handleKeyButtonLongPress = (buttonIndex: 1 | 2 | 3) => {
+    setEditingButton(buttonIndex);
+    setSelectedNote('C');
+    setSelectedIsMinor(false);
+    setShowKeySelector(true);
+  };
+
+  const handleKeyButtonDoubleClick = (buttonIndex: 1 | 2 | 3) => {
+    handleKeyButtonLongPress(buttonIndex);
+  };
+
+  const handleSaveCustomKey = () => {
+    if (editingButton === null) return;
+    
+    const fullNote = selectedIsMinor ? selectedNote + 'm' : selectedNote;
+    const newKeys = { ...customKeys };
+    
+    if (editingButton === 1) newKeys.key1 = fullNote;
+    else if (editingButton === 2) newKeys.key2 = fullNote;
+    else if (editingButton === 3) newKeys.key3 = fullNote;
+    
+    saveCustomKeys(newKeys);
+    setShowKeySelector(false);
+    setEditingButton(null);
+    showNotification(`Botón ${editingButton} actualizado a ${fullNote}`, 'success');
+  };
+
+  const handleMouseDown = (buttonIndex: 1 | 2 | 3) => {
+    longPressTimerRef.current = window.setTimeout(() => {
+      handleKeyButtonLongPress(buttonIndex);
+      longPressTimerRef.current = null;
+    }, 1000); // 1 segundo para clic largo
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleDoubleClick = (buttonIndex: 1 | 2 | 3) => {
+    handleKeyButtonDoubleClick(buttonIndex);
+  };
+
   const copyLyrics = () => {
     const cleanLyrics = transposedLyrics.replace(/\/\/[^\n]*\n/g, '').replace(/\n{3,}/g, '\n\n').trim();
     navigator.clipboard.writeText(cleanLyrics); showNotification('Letra copiada', 'success');
@@ -452,10 +544,80 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
         <button onClick={() => setShowConfig(!showConfig)} className="p-2 rounded-xl" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={18} /></button>
       </div>
 
-      <div className="flex-shrink-0 flex items-center gap-1 mb-2">
-        <button onClick={() => handleSelectActiveKey(null)} className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${activeKey === null ? 'ring-2 ring-offset-1 ring-purple-500' : ''}`} style={{ backgroundColor: activeKey === null ? 'var(--accent)' : 'var(--bg-tertiary)', color: activeKey === null ? 'white' : 'var(--text-secondary)' }} title="Tono original">{song.key}</button>
-        {song.optionalKey1 && <button onClick={() => handleSelectActiveKey(song.optionalKey1!.replace(/m$/, ''))} className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${activeKey === song.optionalKey1 ? 'ring-2 ring-offset-1 ring-purple-500' : ''}`} style={{ backgroundColor: activeKey === song.optionalKey1 ? 'var(--gold)' : 'var(--bg-tertiary)', color: activeKey === song.optionalKey1 ? 'white' : 'var(--text-secondary)' }} title="Nota opcional 1">{song.optionalKey1}</button>}
-        {song.optionalKey2 && <button onClick={() => handleSelectActiveKey(song.optionalKey2!.replace(/m$/, ''))} className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${activeKey === song.optionalKey2 ? 'ring-2 ring-offset-1 ring-purple-500' : ''}`} style={{ backgroundColor: activeKey === song.optionalKey2 ? 'var(--gold)' : 'var(--bg-tertiary)', color: activeKey === song.optionalKey2 ? 'white' : 'var(--text-secondary)' }} title="Nota opcional 2">{song.optionalKey2}</button>}
+      {/* Sistema de 4 botones de transposición */}
+      <div className="flex-shrink-0 mb-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Botón 1: Tono Original */}
+          <button
+            onClick={() => handleKeyButtonClick(0, null)}
+            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeKey === null ? 'ring-2 ring-offset-2 ring-purple-500 scale-105' : ''}`}
+            style={{ 
+              backgroundColor: activeKey === null ? 'var(--accent)' : 'var(--bg-tertiary)', 
+              color: activeKey === null ? 'white' : 'var(--text-secondary)',
+              minWidth: '60px'
+            }}
+            title="Tono original"
+          >
+            {song.key}
+          </button>
+
+          {/* Botón 2: Tono Personalizado 1 */}
+          <button
+            onClick={() => handleKeyButtonClick(1, customKeys.key1)}
+            onMouseDown={() => handleMouseDown(1)}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onDoubleClick={() => handleDoubleClick(1)}
+            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeKey === customKeys.key1 ? 'ring-2 ring-offset-2 ring-purple-500 scale-105' : ''}`}
+            style={{ 
+              backgroundColor: activeKey === customKeys.key1 ? 'var(--accent)' : 'var(--bg-tertiary)', 
+              color: activeKey === customKeys.key1 ? 'white' : 'var(--text-secondary)',
+              minWidth: '60px'
+            }}
+            title={customKeys.key1 ? `${customKeys.key1} (clic largo para editar)` : 'Sin tono asignado (clic largo para editar)'}
+          >
+            {customKeys.key1 || '+'}
+          </button>
+
+          {/* Botón 3: Tono Personalizado 2 */}
+          <button
+            onClick={() => handleKeyButtonClick(2, customKeys.key2)}
+            onMouseDown={() => handleMouseDown(2)}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onDoubleClick={() => handleDoubleClick(2)}
+            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeKey === customKeys.key2 ? 'ring-2 ring-offset-2 ring-purple-500 scale-105' : ''}`}
+            style={{ 
+              backgroundColor: activeKey === customKeys.key2 ? 'var(--accent)' : 'var(--bg-tertiary)', 
+              color: activeKey === customKeys.key2 ? 'white' : 'var(--text-secondary)',
+              minWidth: '60px'
+            }}
+            title={customKeys.key2 ? `${customKeys.key2} (clic largo para editar)` : 'Sin tono asignado (clic largo para editar)'}
+          >
+            {customKeys.key2 || '+'}
+          </button>
+
+          {/* Botón 4: Tono Personalizado 3 */}
+          <button
+            onClick={() => handleKeyButtonClick(3, customKeys.key3)}
+            onMouseDown={() => handleMouseDown(3)}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onDoubleClick={() => handleDoubleClick(3)}
+            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeKey === customKeys.key3 ? 'ring-2 ring-offset-2 ring-purple-500 scale-105' : ''}`}
+            style={{ 
+              backgroundColor: activeKey === customKeys.key3 ? 'var(--accent)' : 'var(--bg-tertiary)', 
+              color: activeKey === customKeys.key3 ? 'white' : 'var(--text-secondary)',
+              minWidth: '60px'
+            }}
+            title={customKeys.key3 ? `${customKeys.key3} (clic largo para editar)` : 'Sin tono asignado (clic largo para editar)'}
+          >
+            {customKeys.key3 || '+'}
+          </button>
+        </div>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+          💡 Clic largo (1s) o doble clic en los botones + para editar
+        </p>
       </div>
 
       {showConfig && (
@@ -544,6 +706,87 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
                 <button onClick={() => { setEditingKeySlot(null); setIsMinor(false); }} className="w-full py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Volver</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de selección de notas para los botones personalizados */}
+      {showKeySelector && editingButton && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowKeySelector(false)}>
+          <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-4">Editar Botón {editingButton}</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Selecciona la nota</label>
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  {allNotes.map(note => (
+                    <button
+                      key={note}
+                      onClick={() => setSelectedNote(note)}
+                      className={`py-3 rounded-lg text-base font-bold transition-all ${selectedNote === note ? 'scale-110' : ''}`}
+                      style={{
+                        backgroundColor: selectedNote === note ? 'var(--accent)' : 'var(--bg-tertiary)',
+                        color: selectedNote === note ? 'white' : 'var(--text-primary)',
+                        border: selectedNote === note ? '2px solid var(--accent)' : '2px solid transparent'
+                      }}
+                    >
+                      {note}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Tipo de acorde</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedIsMinor(false)}
+                    className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${!selectedIsMinor ? 'scale-105' : ''}`}
+                    style={{
+                      backgroundColor: !selectedIsMinor ? 'var(--accent)' : 'var(--bg-tertiary)',
+                      color: !selectedIsMinor ? 'white' : 'var(--text-primary)'
+                    }}
+                  >
+                    Mayor (M)
+                  </button>
+                  <button
+                    onClick={() => setSelectedIsMinor(true)}
+                    className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${selectedIsMinor ? 'scale-105' : ''}`}
+                    style={{
+                      backgroundColor: selectedIsMinor ? 'var(--accent)' : 'var(--bg-tertiary)',
+                      color: selectedIsMinor ? 'white' : 'var(--text-primary)'
+                    }}
+                  >
+                    Menor (m)
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl text-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Vista previa:</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>
+                  {selectedNote}{selectedIsMinor ? 'm' : ''}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowKeySelector(false)}
+                  className="flex-1 py-3 rounded-lg text-sm font-bold"
+                  style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveCustomKey}
+                  className="flex-1 py-3 rounded-lg text-sm font-bold"
+                  style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
