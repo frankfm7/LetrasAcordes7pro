@@ -14,16 +14,15 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
   const { addCustomSong } = useApp();
   const [step, setStep] = useState<'upload' | 'crop' | 'process' | 'edit'>('upload');
   const [image, setImage] = useState<string | null>(null);
-  const [extractedText, setExtractedText] = useState('');
   const [progress, setProgress] = useState(0);
   
   // Estados para el crop
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
+  const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
   
   // Estados para editar la canción
   const [title, setTitle] = useState('');
@@ -52,25 +51,39 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
       
       const img = new Image();
       img.onload = () => {
-        // Ajustar tamaño del canvas
-        const maxWidth = 800;
-        const maxHeight = 600;
-        let width = img.width;
-        let height = img.height;
+        // Guardar tamaño natural de la imagen
+        setNaturalSize({ width: img.width, height: img.height });
         
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width;
-          width = maxWidth;
+        // Calcular tamaño de display (manteniendo calidad)
+        const maxWidth = Math.min(window.innerWidth - 100, 1200);
+        const maxHeight = Math.min(window.innerHeight - 300, 900);
+        
+        let displayWidth = img.width;
+        let displayHeight = img.height;
+        
+        if (displayWidth > maxWidth) {
+          displayHeight = (displayHeight * maxWidth) / displayWidth;
+          displayWidth = maxWidth;
         }
-        if (height > maxHeight) {
-          width = (width * maxHeight) / height;
-          height = maxHeight;
+        if (displayHeight > maxHeight) {
+          displayWidth = (displayWidth * maxHeight) / displayHeight;
+          displayHeight = maxHeight;
         }
         
-        canvas.width = width;
-        canvas.height = height;
-        setImageSize({ width, height });
-        ctx.drawImage(img, 0, 0, width, height);
+        // IMPORTANTE: El canvas mantiene la resolución original para mejor calidad
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        // Pero el display se ajusta al tamaño calculado
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
+        
+        setDisplaySize({ width: displayWidth, height: displayHeight });
+        
+        // Dibujar con alta calidad
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0);
       };
       img.src = image;
     }
@@ -83,24 +96,46 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Redibujar la imagen
+    // Redibujar la imagen original
     const img = new Image();
     img.onload = () => {
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0);
       
       // Dibujar el rectángulo de selección
       if (cropBox.width > 0 && cropBox.height > 0) {
+        // Oscurecer el área fuera de la selección
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        
+        // Arriba
+        ctx.fillRect(0, 0, canvas.width, cropBox.y);
+        // Abajo
+        ctx.fillRect(0, cropBox.y + cropBox.height, canvas.width, canvas.height - cropBox.y - cropBox.height);
+        // Izquierda
+        ctx.fillRect(0, cropBox.y, cropBox.x, cropBox.height);
+        // Derecha
+        ctx.fillRect(cropBox.x + cropBox.width, cropBox.y, canvas.width - cropBox.x - cropBox.width, cropBox.height);
+        
+        // Borde del rectángulo
         ctx.strokeStyle = '#7c3aed';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 4;
+        ctx.setLineDash([10, 5]);
         ctx.strokeRect(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
         
-        // Oscurecer el área fuera de la selección
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(0, 0, canvas.width, cropBox.y);
-        ctx.fillRect(0, cropBox.y + cropBox.height, canvas.width, canvas.height - cropBox.y - cropBox.height);
-        ctx.fillRect(0, cropBox.y, cropBox.x, cropBox.height);
-        ctx.fillRect(cropBox.x + cropBox.width, cropBox.y, canvas.width - cropBox.x - cropBox.width, cropBox.height);
+        // Esquinas del rectángulo
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#7c3aed';
+        const cornerSize = 10;
+        
+        // Esquina superior izquierda
+        ctx.fillRect(cropBox.x - cornerSize/2, cropBox.y - cornerSize/2, cornerSize, cornerSize);
+        // Esquina superior derecha
+        ctx.fillRect(cropBox.x + cropBox.width - cornerSize/2, cropBox.y - cornerSize/2, cornerSize, cornerSize);
+        // Esquina inferior izquierda
+        ctx.fillRect(cropBox.x - cornerSize/2, cropBox.y + cropBox.height - cornerSize/2, cornerSize, cornerSize);
+        // Esquina inferior derecha
+        ctx.fillRect(cropBox.x + cropBox.width - cornerSize/2, cropBox.y + cropBox.height - cornerSize/2, cornerSize, cornerSize);
       }
     };
     img.src = image;
@@ -112,17 +147,29 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
     }
   }, [cropBox, step, image]);
 
-  const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const getMousePos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     
     const rect = canvas.getBoundingClientRect();
+    
+    // Calcular factor de escala entre display y resolución real
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     
+    let clientX: number, clientY: number;
+    
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 
@@ -149,8 +196,34 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
     setIsDrawing(false);
   };
 
+  // Touch events para móvil
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const pos = getMousePos(e);
+    setIsDrawing(true);
+    setStartPos(pos);
+    setCropBox({ x: pos.x, y: pos.y, width: 0, height: 0 });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!isDrawing) return;
+    
+    const pos = getMousePos(e);
+    setCropBox({
+      x: Math.min(startPos.x, pos.x),
+      y: Math.min(startPos.y, pos.y),
+      width: Math.abs(pos.x - startPos.x),
+      height: Math.abs(pos.y - startPos.y),
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDrawing(false);
+  };
+
   const handleCrop = () => {
-    if (cropBox.width < 20 || cropBox.height < 20) {
+    if (cropBox.width < 50 || cropBox.height < 50) {
       showNotification('Selecciona un área más grande', 'error');
       return;
     }
@@ -163,15 +236,20 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // Crear canvas temporal para el crop
+    // Crear canvas temporal para el crop con ALTA CALIDAD
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
     
+    // Mantener resolución original del área seleccionada
     tempCanvas.width = cropBox.width;
     tempCanvas.height = cropBox.height;
     
-    // Dibujar solo el área seleccionada
+    // Alta calidad
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.imageSmoothingQuality = 'high';
+    
+    // Dibujar solo el área seleccionada desde el canvas original (alta resolución)
     tempCtx.drawImage(
       canvas,
       cropBox.x,
@@ -184,11 +262,12 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
       cropBox.height
     );
     
-    const croppedImageData = tempCanvas.toDataURL();
+    // Convertir a base64 con alta calidad
+    const croppedImageData = tempCanvas.toDataURL('image/png', 1.0);
     setProgress(0);
     
     try {
-      const result = await Tesseract.recognize(croppedImageData, 'spa', {
+      const result = await Tesseract.recognize(croppedImageData, 'spa+eng', {
         logger: (m) => {
           if (m.status === 'recognizing text') {
             setProgress(Math.round(m.progress * 100));
@@ -196,9 +275,10 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
         },
       });
       
-      setExtractedText(result.data.text);
-      setLyrics(result.data.text);
+      const extractedText = result.data.text;
+      setLyrics(extractedText);
       setStep('edit');
+      showNotification('Imagen procesada exitosamente', 'success');
     } catch (error) {
       console.error('Error en OCR:', error);
       showNotification('Error al procesar la imagen', 'error');
@@ -228,7 +308,7 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
     };
     
     addCustomSong(newSong);
-    showNotification('Canción importada exitosamente', 'success');
+    showNotification('Canción guardada en el himnario seleccionado', 'success');
     onClose();
   };
 
@@ -239,7 +319,7 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-4xl rounded-2xl p-6 max-h-[90vh] overflow-y-auto" 
+        className="w-full max-w-5xl rounded-2xl p-6 max-h-[95vh] overflow-y-auto" 
         style={{ backgroundColor: 'var(--card-bg)' }}
         onClick={e => e.stopPropagation()}
       >
@@ -288,15 +368,14 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
             <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <p className="text-sm font-semibold mb-2">Instrucciones:</p>
               <ol className="text-xs space-y-1" style={{ color: 'var(--text-muted)' }}>
-                <li>1. Haz clic y arrastra para seleccionar el área donde está la letra</li>
-                <li>2. Intenta incluir solo la letra y los acordes</li>
-                <li>3. Evita incluir títulos, números de página u otros textos</li>
+                <li>1. Haz clic y arrastra (o toca y arrastra en móvil) para seleccionar el área</li>
+                <li>2. Incluye solo la letra y los acordes</li>
+                <li>3. Evita títulos, números de página u otros textos</li>
               </ol>
             </div>
             
             <div 
-              ref={containerRef}
-              className="relative border-2 rounded-xl overflow-hidden" 
+              className="relative border-2 rounded-xl overflow-hidden flex justify-center" 
               style={{ borderColor: 'var(--border-color)' }}
             >
               <canvas
@@ -305,8 +384,11 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
-                className="w-full cursor-crosshair"
-                style={{ display: 'block' }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                className="cursor-crosshair max-w-full"
+                style={{ display: 'block', touchAction: 'none' }}
               />
             </div>
             
@@ -349,10 +431,10 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
         
         {step === 'edit' && (
           <div className="space-y-4">
-            <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-              <p className="text-sm font-semibold mb-2">Texto extraído:</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Revisa y corrige el texto extraído. Puedes editar todo antes de guardar.
+            <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-light)', border: '2px solid var(--accent)' }}>
+              <p className="text-sm font-semibold mb-2">📍 ¿Dónde se guardará?</p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                La canción se guardará en el himnario que selecciones abajo. Podrás encontrarla en la página principal dentro de ese himnario.
               </p>
             </div>
             
@@ -396,11 +478,11 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold mb-1.5 block">Himnario</label>
+                <label className="text-xs font-bold mb-1.5 block">📚 Himnario destino</label>
                 <select
                   value={selectedHymnal}
                   onChange={e => setSelectedHymnal(e.target.value)}
-                  className="w-full p-3 rounded-xl border text-sm"
+                  className="w-full p-3 rounded-xl border text-sm font-semibold"
                   style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
                 >
                   {hymnals.map(h => (
@@ -411,7 +493,7 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
             </div>
             
             <div>
-              <label className="text-xs font-bold mb-1.5 block">Letra y Acordes</label>
+              <label className="text-xs font-bold mb-1.5 block">Letra y Acordes (edita si es necesario)</label>
               <textarea
                 value={lyrics}
                 onChange={e => setLyrics(e.target.value)}
@@ -439,7 +521,7 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
                 className="flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
                 style={{ backgroundColor: 'var(--accent)', color: 'white' }}
               >
-                <Save size={18} /> Guardar Canción
+                <Save size={18} /> Guardar en {hymnals.find(h => h.id === selectedHymnal)?.name}
               </button>
             </div>
           </div>

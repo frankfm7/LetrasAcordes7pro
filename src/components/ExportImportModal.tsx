@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { X, Download, Upload, FileText, File, Search, CheckSquare, Square, Camera } from 'lucide-react';
+import { X, Download, Upload, FileText, File, Search, CheckSquare, Square, Camera, Save } from 'lucide-react';
 import { Song } from '../types';
-import { songs as allSongs } from '../data/songs';
+import { songs as allSongs, hymnals } from '../data/songs';
 import { useApp } from '../context/AppContext';
 import { generateSongShareText } from '../utils/shareUtils';
 
@@ -12,12 +12,20 @@ interface ExportImportModalProps {
 }
 
 export default function ExportImportModal({ onClose, mode, showNotification }: ExportImportModalProps) {
-  const { state } = useApp();
+  const { state, addCustomSong } = useApp();
   const [step, setStep] = useState<'choice' | 'single' | 'batch' | 'format'>('choice');
   const [exportType, setExportType] = useState<'single' | 'batch'>('single');
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [exportFormat, setExportFormat] = useState<'text' | 'pdf' | 'word'>('text');
+  
+  // Estados para importación
+  const [importedText, setImportedText] = useState('');
+  const [showEditor, setShowEditor] = useState(false);
+  const [importTitle, setImportTitle] = useState('');
+  const [importArtist, setImportArtist] = useState('');
+  const [importKey, setImportKey] = useState('C');
+  const [importHymnal, setImportHymnal] = useState('alabanzas');
 
   const allAvailableSongs = useMemo(() => {
     const customSongsMap = new Map(state.customSongs.map(s => [s.id, s]));
@@ -189,15 +197,16 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
       
       if (extension === 'txt') {
         const text = await file.text();
-        // Aquí podrías parsear el texto y crear canciones
-        showNotification('Archivo de texto importado', 'success');
+        setImportedText(text);
+        setShowEditor(true);
       } else if (extension === 'pdf') {
         showNotification('Importación de PDF - Funcionalidad en desarrollo', 'info');
       } else if (extension === 'docx') {
         const arrayBuffer = await file.arrayBuffer();
         const { extractRawText } = await import('mammoth');
         const result = await extractRawText({ arrayBuffer });
-        showNotification('Archivo Word importado', 'success');
+        setImportedText(result.value);
+        setShowEditor(true);
       } else {
         showNotification('Formato no soportado', 'error');
       }
@@ -207,15 +216,163 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
     }
   };
 
+  const handleSaveImported = () => {
+    if (!importTitle.trim()) {
+      showNotification('El título es obligatorio', 'error');
+      return;
+    }
+    
+    const newSong: Song = {
+      id: `custom-${Date.now()}`,
+      title: importTitle.trim(),
+      artist: importArtist.trim() || 'Desconocido',
+      code: `IMP${Date.now().toString().slice(-4)}`,
+      hymnalId: importHymnal,
+      key: importKey,
+      timeSignature: '4/4',
+      bpm: 100,
+      language: 'Castellano',
+      categories: ['General'],
+      sections: [],
+      lyrics: importedText,
+      notes: 'Importado desde archivo',
+    };
+    
+    addCustomSong(newSong);
+    showNotification(`Canción guardada en ${hymnals.find((h: any) => h.id === importHymnal)?.name}`, 'success');
+    onClose();
+  };
+
   if (mode === 'import') {
+    if (showEditor) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
+          <div className="w-full max-w-3xl rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => setShowEditor(false)}
+                className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+                style={{ color: 'white' }}
+                title="Volver"
+              >
+                ‹
+              </button>
+              <h3 className="text-xl font-bold flex-1 text-center">Editar Canción Importada</h3>
+              <div style={{ width: '48px' }}></div>
+            </div>
+            
+            <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: 'var(--accent-light)', border: '2px solid var(--accent)' }}>
+              <p className="text-sm font-semibold mb-2">📍 ¿Dónde se guardará?</p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                La canción se guardará en el himnario que selecciones abajo. Podrás encontrarla en la página principal dentro de ese himnario.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="text-xs font-bold mb-1.5 block">Título *</label>
+                <input
+                  type="text"
+                  value={importTitle}
+                  onChange={e => setImportTitle(e.target.value)}
+                  placeholder="Título de la canción"
+                  className="w-full p-3 rounded-xl border text-sm"
+                  style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold mb-1.5 block">Artista</label>
+                <input
+                  type="text"
+                  value={importArtist}
+                  onChange={e => setImportArtist(e.target.value)}
+                  placeholder="Artista o autor"
+                  className="w-full p-3 rounded-xl border text-sm"
+                  style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="text-xs font-bold mb-1.5 block">Tonalidad</label>
+                <select
+                  value={importKey}
+                  onChange={e => setImportKey(e.target.value)}
+                  className="w-full p-3 rounded-xl border text-sm"
+                  style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                >
+                  {['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(k => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold mb-1.5 block">📚 Himnario destino</label>
+                <select
+                  value={importHymnal}
+                  onChange={e => setImportHymnal(e.target.value)}
+                  className="w-full p-3 rounded-xl border text-sm font-semibold"
+                  style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                >
+                  {hymnals.map(h => (
+                    <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <label className="text-xs font-bold mb-1.5 block">Letra y Acordes (edita si es necesario)</label>
+              <textarea
+                value={importedText}
+                onChange={e => setImportedText(e.target.value)}
+                rows={15}
+                className="w-full p-3 rounded-xl border text-sm font-mono"
+                style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                placeholder="Edita la letra y agrega los acordes con // al inicio de cada línea"
+              />
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                💡 Usa // antes de los acordes. Ejemplo: //Am F Em Am
+              </p>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowEditor(false)}
+                className="flex-1 py-3 rounded-xl font-bold"
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              >
+                ‹ Cancelar
+              </button>
+              <button
+                onClick={handleSaveImported}
+                disabled={!importTitle.trim()}
+                className="flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+              >
+                <Save size={18} /> Guardar en {hymnals.find(h => h.id === importHymnal)?.name}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
         <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold">Importar Canciones</h3>
-            <button onClick={onClose} className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
-              <X size={20} />
+            <button
+              onClick={onClose}
+              className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+              style={{ color: 'white' }}
+              title="Volver"
+            >
+              ‹
             </button>
+            <h3 className="text-xl font-bold flex-1 text-center">Importar Canciones</h3>
+            <div style={{ width: '48px' }}></div>
           </div>
           
           <div className="space-y-3">
@@ -230,7 +387,8 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
                     const reader = new FileReader();
                     reader.onload = (ev) => {
                       const text = ev.target?.result as string;
-                      showNotification(`Texto importado: ${text.substring(0, 50)}...`, 'success');
+                      setImportedText(text);
+                      setShowEditor(true);
                     };
                     reader.readAsText(file);
                   }
@@ -287,7 +445,8 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
                       const arrayBuffer = await file.arrayBuffer();
                       const { extractRawText } = await import('mammoth');
                       const result = await extractRawText({ arrayBuffer });
-                      showNotification(`Word importado: ${result.value.substring(0, 50)}...`, 'success');
+                      setImportedText(result.value);
+                      setShowEditor(true);
                     } catch (error) {
                       showNotification('Error al importar Word', 'error');
                     }
