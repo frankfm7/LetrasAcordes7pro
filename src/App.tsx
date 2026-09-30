@@ -14,6 +14,8 @@ import OCRModal from './components/OCRModal';
 import Metronome from './components/Metronome';
 import Tuner from './components/Tuner';
 import CircleOfFifths from './components/CircleOfFifths';
+import ExportImportModal from './components/ExportImportModal';
+import ImageImportModal from './components/ImageImportModal';
 
 function AppContent() {
   const { state, setTheme } = useApp();
@@ -25,6 +27,9 @@ function AppContent() {
   const [showAddHymnalModal, setShowAddHymnalModal] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: string } | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showImageImportModal, setShowImageImportModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [bgImage, setBgImage] = useState<string | null>(null);
 
@@ -96,7 +101,7 @@ function AppContent() {
 
   if (editingSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} bgImage={bgImage} onBgImageChange={handleBgImageChange} fileInputRef={fileInputRef}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} bgImage={bgImage} onBgImageChange={handleBgImageChange} fileInputRef={fileInputRef} setShowExportModal={setShowExportModal} setShowImportModal={setShowImportModal} setShowImageImportModal={setShowImageImportModal}>
         <SongEditor song={editingSong} onBack={() => setEditingSong(null)} />
       </Layout>
     );
@@ -104,7 +109,7 @@ function AppContent() {
 
   if (selectedSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} bgImage={bgImage} onBgImageChange={handleBgImageChange} fileInputRef={fileInputRef}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} bgImage={bgImage} onBgImageChange={handleBgImageChange} fileInputRef={fileInputRef} setShowExportModal={setShowExportModal} setShowImportModal={setShowImportModal} setShowImageImportModal={setShowImageImportModal}>
         <SongView song={selectedSong} onBack={handleBack} showNotification={showNotification} onEdit={() => setEditingSong(selectedSong)} />
       </Layout>
     );
@@ -112,7 +117,7 @@ function AppContent() {
 
   if (selectedHymnal) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} bgImage={bgImage} onBgImageChange={handleBgImageChange} fileInputRef={fileInputRef}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} bgImage={bgImage} onBgImageChange={handleBgImageChange} fileInputRef={fileInputRef} setShowExportModal={setShowExportModal} setShowImportModal={setShowImportModal} setShowImageImportModal={setShowImageImportModal}>
         <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} showNotification={showNotification} />
       </Layout>
     );
@@ -131,9 +136,12 @@ function AppContent() {
   };
 
   return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onAddHymnal={() => setShowAddHymnalModal(true)} bgImage={bgImage} onBgImageChange={handleBgImageChange} fileInputRef={fileInputRef}>
+    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onAddHymnal={() => setShowAddHymnalModal(true)} bgImage={bgImage} onBgImageChange={handleBgImageChange} fileInputRef={fileInputRef} setShowExportModal={setShowExportModal} setShowImportModal={setShowImportModal} setShowImageImportModal={setShowImageImportModal}>
       {renderPage()}
       {showAddHymnalModal && <AddHymnalModal onClose={() => setShowAddHymnalModal(false)} />}
+      {showExportModal && <ExportImportModal onClose={() => setShowExportModal(false)} mode="export" showNotification={showNotification} />}
+      {showImportModal && <ExportImportModal onClose={() => setShowImportModal(false)} mode="import" showNotification={showNotification} />}
+      {showImageImportModal && <ImageImportModal onClose={() => setShowImageImportModal(false)} showNotification={showNotification} />}
       {notification && (
         <div className="fixed top-20 right-4 z-[100] p-4 rounded-xl shadow-lg animate-fade-in max-w-sm" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
           <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{notification.message}</span>
@@ -143,7 +151,7 @@ function AppContent() {
   );
 }
 
-function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport, onAddHymnal, bgImage, onBgImageChange, fileInputRef }: any) {
+function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport, onAddHymnal, bgImage, onBgImageChange, fileInputRef, setShowExportModal, setShowImportModal, setShowImageImportModal }: any) {
   const { state, setTheme } = useApp();
   const [globalBg, setGlobalBg] = useState<string | null>(null);
   const menuItems = [
@@ -194,8 +202,11 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
               ))}
               <p className="text-xs font-semibold uppercase tracking-wider mb-2 mt-4 px-3" style={{ color: 'var(--text-muted)' }}>Gestión</p>
               {onAddHymnal && <button onClick={() => { onAddHymnal(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Plus size={20} /><span className="font-medium text-sm">Nuevo Himnario</span></button>}
-              <button onClick={() => { onImport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Upload size={20} /><span className="font-medium text-sm">Importar Datos</span></button>
-              <button onClick={() => { onExport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Download size={20} /><span className="font-medium text-sm">Exportar Datos</span></button>
+              <button onClick={() => { onImport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Upload size={20} /><span className="font-medium text-sm">Importar Datos (JSON)</span></button>
+              <button onClick={() => { onExport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Download size={20} /><span className="font-medium text-sm">Exportar Datos (JSON)</span></button>
+              <button onClick={() => { setShowExportModal(true); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Download size={20} /><span className="font-medium text-sm">Exportar Canciones (PDF/Word/TXT)</span></button>
+              <button onClick={() => { setShowImportModal(true); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Upload size={20} /><span className="font-medium text-sm">Importar Canciones (PDF/Word/TXT)</span></button>
+              <button onClick={() => { setShowImageImportModal(true); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Camera size={20} /><span className="font-medium text-sm">Importar desde Imagen (OCR)</span></button>
               <button onClick={() => { fileInputRef.current?.click(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1" style={{ color: 'var(--text-secondary)' }}><Image size={20} /><span className="font-medium text-sm">{bgImage ? 'Cambiar Fondo' : 'Imagen de Fondo'}</span></button>
               {bgImage && <button onClick={() => { localStorage.removeItem('cancionero-bg-image'); window.location.reload(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 text-red-500"><X size={20} /><span className="font-medium text-sm">Quitar Fondo</span></button>}
             </nav>
