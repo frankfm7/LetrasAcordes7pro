@@ -330,6 +330,30 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   }, [initialSong, state.customSongs]);
   const { preferences } = state;
 
+  // Sincronizar el tono activo cuando el tono original de la canción cambia
+  useEffect(() => {
+    // Si el tono activo es el original (null), mantenerlo sincronizado
+    if (activeKey === null) {
+      // No hacer nada, el botón 1 ya muestra song.key automáticamente
+    } else {
+      // Si hay un tono personalizado activo, verificar si necesita actualizarse
+      const isCustomKey = customKeys.key1 === activeKey || customKeys.key2 === activeKey || customKeys.key3 === activeKey;
+      
+      // Si el tono activo ya no coincide con ningún tono personalizado, volver al original
+      if (!isCustomKey && activeKey !== song.key) {
+        setActiveKey(null);
+        setTransposition(0);
+      }
+    }
+  }, [song.key, activeKey, customKeys]);
+
+  // Resetear transposición cuando el tono original cambia y estábamos en el tono original
+  useEffect(() => {
+    if (activeKey === null && transposition !== 0) {
+      setTransposition(0);
+    }
+  }, [song.key, activeKey, transposition]);
+
   // Cargar claves personalizadas desde localStorage
   useEffect(() => {
     const saved = localStorage.getItem(`song-keys-${song.id}`);
