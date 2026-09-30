@@ -13,6 +13,7 @@ import SplashScreen from './components/SplashScreen';
 import OCRModal from './components/OCRModal';
 import Metronome from './components/Metronome';
 import Tuner from './components/Tuner';
+import CircleOfFifths from './components/CircleOfFifths';
 
 function AppContent() {
   const { state, setTheme } = useApp();
@@ -323,6 +324,9 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   const [selectedNote, setSelectedNote] = useState('C');
   const [selectedIsMinor, setSelectedIsMinor] = useState(false);
   const longPressTimerRef = useRef<number | null>(null);
+  
+  // Estado para el Círculo de Quintas
+  const [showCircleOfFifths, setShowCircleOfFifths] = useState(false);
 
   const song = useMemo(() => {
     const customSong = state.customSongs.find(s => s.id === initialSong.id);
@@ -453,6 +457,24 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
     else updatedSong.optionalKey2 = fullNote;
     updateCustomSong(updatedSong);
     setShowEditKeysModal(false); setEditingKeySlot(null); setIsMinor(false);
+  };
+
+  // Función para manejar la selección de tono desde el Círculo de Quintas
+  const handleCircleKeySelect = (key: string) => {
+    // Extraer la nota base (sin 'm' si es menor)
+    const baseKey = key.replace(/m$/, '');
+    const baseOriginalKey = song.key.replace(/m$/, '');
+    
+    const originalIndex = allNotes.indexOf(baseOriginalKey);
+    const newIndex = allNotes.indexOf(baseKey);
+    
+    if (originalIndex !== -1 && newIndex !== -1) {
+      const semitones = newIndex - originalIndex;
+      setTransposition(semitones);
+      setActiveKey(key);
+      setShowCircleOfFifths(false);
+      showNotification(`Transpuesto a ${key}`, 'success');
+    }
   };
 
   // Funciones para el sistema de 4 botones de transposición
@@ -655,6 +677,20 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
           >
             {customKeys.key3 || '+'}
           </button>
+
+          {/* Botón Círculo de Quintas */}
+          <button
+            onClick={() => setShowCircleOfFifths(true)}
+            className="px-2 py-1 rounded-md text-xs font-bold transition-all hover:scale-105"
+            style={{ 
+              backgroundColor: 'var(--gold)', 
+              color: 'white',
+              minWidth: '36px'
+            }}
+            title="Abrir Círculo de Quintas"
+          >
+            🎯
+          </button>
         </div>
       </div>
 
@@ -827,6 +863,15 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal del Círculo de Quintas */}
+      {showCircleOfFifths && (
+        <CircleOfFifths
+          currentKey={activeKey || song.key}
+          onKeySelect={handleCircleKeySelect}
+          onClose={() => setShowCircleOfFifths(false)}
+        />
       )}
     </div>
   );
@@ -1338,6 +1383,7 @@ function ToolsPage() {
 
   if (activeTool === 'metronome') return (<div className="pb-4"><button onClick={() => setActiveTool(null)} className="flex items-center gap-2 mb-4 text-sm font-semibold" style={{ color: 'var(--accent)' }}><ChevronLeft size={16} /> Volver</button><Metronome /></div>);
   if (activeTool === 'tuner') return (<div className="pb-4"><button onClick={() => setActiveTool(null)} className="flex items-center gap-2 mb-4 text-sm font-semibold" style={{ color: 'var(--accent)' }}><ChevronLeft size={16} /> Volver</button><Tuner /></div>);
+  if (activeTool === 'circle') return (<div className="pb-4"><button onClick={() => setActiveTool(null)} className="flex items-center gap-2 mb-4 text-sm font-semibold" style={{ color: 'var(--accent)' }}><ChevronLeft size={16} /> Volver</button><CircleOfFifths /></div>);
 
   return (
     <div className="space-y-4 pb-4">
@@ -1402,8 +1448,8 @@ function ToolsPage() {
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => setActiveTool('metronome')} className="rounded-2xl border p-5 text-center transition-all hover:scale-[1.02]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}><div className="text-4xl mb-2">🎵</div><h3 className="font-bold text-sm">Metrónomo</h3><p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>BPM, tap tempo, 3 sonidos</p></button>
         <button onClick={() => setActiveTool('tuner')} className="rounded-2xl border p-5 text-center transition-all hover:scale-[1.02]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}><div className="text-4xl mb-2">🎼</div><h3 className="font-bold text-sm">Afinador</h3><p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Guitarra, bajo, ukelele</p></button>
+        <button onClick={() => setActiveTool('circle')} className="rounded-2xl border p-5 text-center transition-all hover:scale-[1.02]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}><div className="text-4xl mb-2">🎯</div><h3 className="font-bold text-sm">Círculo de Quintas</h3><p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Visualiza y transpone</p></button>
         <div className="rounded-2xl border p-5 text-center" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}><div className="text-4xl mb-2">🎸</div><h3 className="font-bold text-sm">Capo</h3><p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Calcula posición</p></div>
-        <div className="rounded-2xl border p-5 text-center" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}><div className="text-4xl mb-2">📝</div><h3 className="font-bold text-sm">Transponer</h3><p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Cambia tonalidad</p></div>
       </div>
     </div>
   );
