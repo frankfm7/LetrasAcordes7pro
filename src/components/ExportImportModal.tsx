@@ -62,9 +62,19 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
   };
 
   const exportAsText = (songs: Song[]) => {
-    const content = songs.map(song => {
-      const text = generateSongShareText(song);
-      return `${'='.repeat(50)}\n${text}\n${'='.repeat(50)}\n`;
+    const content = songs.map((song, index) => {
+      const lyrics = song.lyrics.replace(/\/\/[^\n]*\n/g, '').trim();
+      return `=== CANCIÓN ${index + 1} ===
+Título: ${song.title}
+Artista: ${song.artist}
+Tonalidad: ${song.key}
+Compás: ${song.timeSignature}
+BPM: ${song.bpm}
+Idioma: ${song.language}
+Categorías: ${song.categories.join(', ')}
+---
+${lyrics}
+=== FIN CANCIÓN ${index + 1} ===`;
     }).join('\n\n');
     
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -85,9 +95,15 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
       songs.forEach((song, index) => {
         if (index > 0) doc.addPage();
         
+        // Delimitador visual
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`=== CANCIÓN ${index + 1} ===`, 20, 10);
+        
         // Título
         doc.setFontSize(20);
         doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0);
         doc.text(song.title, 20, 20);
         
         // Artista
@@ -98,12 +114,23 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
         // Info
         doc.setFontSize(10);
         doc.text(`Tonalidad: ${song.key} | Compás: ${song.timeSignature} | BPM: ${song.bpm}`, 20, 40);
+        doc.text(`Idioma: ${song.language} | Categorías: ${song.categories.join(', ')}`, 20, 47);
+        
+        // Línea separadora
+        doc.setDrawColor(200);
+        doc.line(20, 50, 190, 50);
         
         // Letra
         doc.setFontSize(11);
         const lyrics = song.lyrics.replace(/\/\/[^\n]*\n/g, '').trim();
         const lines = doc.splitTextToSize(lyrics, 170);
-        doc.text(lines, 20, 55);
+        doc.text(lines, 20, 60);
+        
+        // Delimitador final
+        const pageHeight = doc.internal.pageSize.height;
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`=== FIN CANCIÓN ${index + 1} ===`, 20, pageHeight - 10);
       });
       
       doc.save(`${songs.length === 1 ? songs[0].title : 'canciones'}_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -116,35 +143,71 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
 
   const exportAsWord = async (songs: Song[]) => {
     try {
-      const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import('docx');
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel, BorderStyle } = await import('docx');
       const { saveAs } = await import('file-saver');
       
-      const sections = songs.map(song => {
+      const sections = songs.map((song, index) => {
         const lyrics = song.lyrics.replace(/\/\/[^\n]*\n/g, '').trim();
         const paragraphs = [
+          // Delimitador inicial
+          new Paragraph({
+            children: [
+              new TextRun({ text: `=== CANCIÓN ${index + 1} ===`, size: 16, color: '999999', italics: true }),
+            ],
+            spacing: { after: 200 },
+          }),
+          // Título
           new Paragraph({
             text: song.title,
             heading: HeadingLevel.HEADING_1,
             spacing: { after: 200 },
           }),
+          // Artista
           new Paragraph({
             children: [
               new TextRun({ text: song.artist, bold: true, size: 24 }),
             ],
             spacing: { after: 200 },
           }),
+          // Info
           new Paragraph({
             children: [
               new TextRun({ text: `Tonalidad: ${song.key} | Compás: ${song.timeSignature} | BPM: ${song.bpm}`, size: 20, italics: true }),
             ],
-            spacing: { after: 400 },
+            spacing: { after: 100 },
           }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: `Idioma: ${song.language} | Categorías: ${song.categories.join(', ')}`, size: 20, italics: true }),
+            ],
+            spacing: { after: 300 },
+          }),
+          // Línea separadora
+          new Paragraph({
+            border: {
+              bottom: {
+                color: 'CCCCCC',
+                size: 6,
+                style: BorderStyle.SINGLE,
+              },
+            },
+            spacing: { after: 300 },
+          }),
+          // Letra
           ...lyrics.split('\n').map(line => 
             new Paragraph({
               children: [new TextRun({ text: line, size: 22 })],
               spacing: { after: 100 },
             })
           ),
+          // Delimitador final
+          new Paragraph({
+            children: [
+              new TextRun({ text: `=== FIN CANCIÓN ${index + 1} ===`, size: 16, color: '999999', italics: true }),
+            ],
+            spacing: { after: 400 },
+          }),
+          // Espacio entre canciones
           new Paragraph({ text: '', spacing: { after: 400 } }),
         ];
         return paragraphs;
@@ -188,6 +251,51 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
     onClose();
   };
 
+  const parseMultipleSongs = (text: string): Song[] => {
+    const songs: Song[] = [];
+    
+    // Buscar patrones de canciones delimitadas
+    const songPattern = /=== CANCIÓN \d+ ===\n([\s\S]*?)=== FIN CANCIÓN \d+ ===/g;
+    let match;
+    
+    while ((match = songPattern.exec(text)) !== null) {
+      const songBlock = match[1];
+      
+      // Extraer metadata
+      const titleMatch = songBlock.match(/Título: (.+)/);
+      const artistMatch = songBlock.match(/Artista: (.+)/);
+      const keyMatch = songBlock.match(/Tonalidad: (.+)/);
+      const timeSigMatch = songBlock.match(/Compás: (.+)/);
+      const bpmMatch = songBlock.match(/BPM: (.+)/);
+      const langMatch = songBlock.match(/Idioma: (.+)/);
+      const catMatch = songBlock.match(/Categorías: (.+)/);
+      
+      // Extraer letra (después de ---)
+      const lyricsStart = songBlock.indexOf('---');
+      const lyrics = lyricsStart !== -1 ? songBlock.substring(lyricsStart + 3).trim() : '';
+      
+      if (titleMatch) {
+        songs.push({
+          id: `custom-${Date.now()}-${songs.length}`,
+          title: titleMatch[1].trim(),
+          artist: artistMatch ? artistMatch[1].trim() : 'Desconocido',
+          code: `IMP${Date.now().toString().slice(-4)}${songs.length}`,
+          hymnalId: 'alabanzas', // Default, se puede cambiar después
+          key: keyMatch ? keyMatch[1].trim() : 'C',
+          timeSignature: timeSigMatch ? timeSigMatch[1].trim() : '4/4',
+          bpm: bpmMatch ? parseInt(bpmMatch[1].trim()) : 100,
+          language: langMatch ? langMatch[1].trim() : 'Castellano',
+          categories: catMatch ? catMatch[1].split(',').map(c => c.trim()) : ['General'],
+          sections: [],
+          lyrics: lyrics,
+          notes: 'Importado desde archivo',
+        });
+      }
+    }
+    
+    return songs;
+  };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -197,16 +305,54 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
       
       if (extension === 'txt') {
         const text = await file.text();
-        setImportedText(text);
-        setShowEditor(true);
+        
+        // Intentar parsear múltiples canciones
+        const parsedSongs = parseMultipleSongs(text);
+        
+        if (parsedSongs.length > 1) {
+          // Múltiples canciones detectadas
+          const confirmed = window.confirm(
+            `Se detectaron ${parsedSongs.length} canciones en el archivo.\n\n` +
+            `¿Deseas importar todas las canciones?\n\n` +
+            `Las canciones se guardarán en el himnario "Alabanzas" por defecto.\n` +
+            `Podrás editarlas después.`
+          );
+          
+          if (confirmed) {
+            parsedSongs.forEach(song => addCustomSong(song));
+            showNotification(`${parsedSongs.length} canciones importadas exitosamente`, 'success');
+            onClose();
+          }
+        } else {
+          // Una sola canción o formato antiguo
+          setImportedText(text);
+          setShowEditor(true);
+        }
       } else if (extension === 'pdf') {
         showNotification('Importación de PDF - Funcionalidad en desarrollo', 'info');
       } else if (extension === 'docx') {
         const arrayBuffer = await file.arrayBuffer();
         const { extractRawText } = await import('mammoth');
         const result = await extractRawText({ arrayBuffer });
-        setImportedText(result.value);
-        setShowEditor(true);
+        
+        // Intentar parsear múltiples canciones
+        const parsedSongs = parseMultipleSongs(result.value);
+        
+        if (parsedSongs.length > 1) {
+          const confirmed = window.confirm(
+            `Se detectaron ${parsedSongs.length} canciones en el archivo.\n\n` +
+            `¿Deseas importar todas las canciones?`
+          );
+          
+          if (confirmed) {
+            parsedSongs.forEach(song => addCustomSong(song));
+            showNotification(`${parsedSongs.length} canciones importadas exitosamente`, 'success');
+            onClose();
+          }
+        } else {
+          setImportedText(result.value);
+          setShowEditor(true);
+        }
       } else {
         showNotification('Formato no soportado', 'error');
       }
