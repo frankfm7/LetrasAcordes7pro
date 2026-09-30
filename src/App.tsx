@@ -144,6 +144,7 @@ function AppContent() {
 
 function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport, onAddHymnal, bgImage, onBgImageChange, fileInputRef }: any) {
   const { state, setTheme } = useApp();
+  const [globalBg, setGlobalBg] = useState<string | null>(null);
   const menuItems = [
     { id: 'home', label: 'Inicio', icon: Home },
     { id: 'search', label: 'Buscar', icon: Search },
@@ -153,9 +154,18 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
     { id: 'tools', label: 'Herramientas', icon: Settings },
   ];
 
+  // Cargar fondo global
+  useEffect(() => {
+    const saved = localStorage.getItem('global-bg-image');
+    if (saved) setGlobalBg(saved);
+  }, []);
+
+  // Usar bgImage (del himnario) o globalBg como fondo
+  const activeBg = bgImage || globalBg;
+
   return (
-    <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', backgroundImage: bgImage ? `url(${bgImage})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
-      {bgImage && <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: state.preferences.theme === 'dark' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)', zIndex: 0 }} />}
+    <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', backgroundImage: activeBg ? `url(${activeBg})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
+      {activeBg && <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: state.preferences.theme === 'dark' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)', zIndex: 0 }} />}
       <div className="relative" style={{ zIndex: 1 }}>
         {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
         {sidebarOpen && (
@@ -552,6 +562,8 @@ function HymnalView({ hymnal: initialHymnal, onSelectSong, onBack, showNotificat
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
+  const [showBgSelector, setShowBgSelector] = useState(false);
+  const [bgImage, setBgImage] = useState<string | null>(null);
   const longPressTimerRef = useRef<number | null>(null);
   const [longPressTriggered, setLongPressTriggered] = useState(false);
 
@@ -559,6 +571,31 @@ function HymnalView({ hymnal: initialHymnal, onSelectSong, onBack, showNotificat
     const customHymnal = state.customHymnals.find(h => h.id === initialHymnal.id);
     return customHymnal || initialHymnal;
   }, [initialHymnal, state.customHymnals]);
+
+  // Cargar imagen de fondo del himnario
+  useEffect(() => {
+    if (hymnal.image) {
+      setBgImage(hymnal.image);
+    }
+  }, [hymnal.image]);
+
+  const handleBgImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setBgImage(result);
+      // Guardar en localStorage para este himnario
+      localStorage.setItem(`hymnal-bg-${hymnal.id}`, result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeBgImage = () => {
+    setBgImage(null);
+    localStorage.removeItem(`hymnal-bg-${hymnal.id}`);
+  };
 
   const hymnalSongs = useMemo(() => {
     const customSongsMap = new Map(state.customSongs.map(s => [s.id, s]));
@@ -659,7 +696,30 @@ function HymnalView({ hymnal: initialHymnal, onSelectSong, onBack, showNotificat
   };
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="relative space-y-4 pb-4">
+      {/* Fondo del himnario */}
+      {bgImage && (
+        <>
+          <div 
+            className="fixed inset-0 pointer-events-none"
+            style={{
+              backgroundImage: `url(${bgImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundAttachment: 'fixed',
+              zIndex: -2,
+            }}
+          />
+          <div 
+            className="fixed inset-0 pointer-events-none"
+            style={{
+              backgroundColor: state.preferences.theme === 'dark' ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)',
+              zIndex: -1,
+            }}
+          />
+        </>
+      )}
+
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={20} /></button>
         <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: hymnal.color + '20' }}>{hymnal.icon}</div>
@@ -672,6 +732,7 @@ function HymnalView({ hymnal: initialHymnal, onSelectSong, onBack, showNotificat
           {showMenu && (
             <div className="absolute right-0 top-full mt-2 w-48 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
               <button onClick={() => { setShowMenu(false); setShowEditModal(true); }} className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={16} /> Editar</button>
+              <button onClick={() => { setShowMenu(false); setShowBgSelector(true); }} className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:opacity-80 border-t" style={{ color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}><Image size={16} /> Fondo</button>
               <button onClick={() => { setShowMenu(false); exportHymnal(); }} className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:opacity-80 border-t" style={{ color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}><Download size={16} /> Exportar</button>
               <button onClick={() => { setShowMenu(false); shareHymnal(); }} className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:opacity-80 border-t" style={{ color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}><Share2 size={16} /> Compartir</button>
               {hymnal.isCustom && <button onClick={() => { setShowMenu(false); handleDelete(); }} className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:opacity-80 text-red-500"><Trash2 size={16} /> Eliminar</button>}
@@ -679,6 +740,36 @@ function HymnalView({ hymnal: initialHymnal, onSelectSong, onBack, showNotificat
           )}
         </div>
       </div>
+
+      {/* Modal de fondo */}
+      {showBgSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowBgSelector(false)}>
+          <div className="w-full max-w-md rounded-2xl p-5" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-4">Imagen de Fondo</h3>
+            <div className="space-y-4">
+              {bgImage && (
+                <div className="relative rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                  <img src={bgImage} alt="Fondo actual" className="w-full h-full object-cover" />
+                  <button onClick={removeBgImage} className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
+              <label className="cursor-pointer">
+                <input type="file" accept="image/*" onChange={handleBgImageChange} className="hidden" />
+                <div className="rounded-xl border-2 border-dashed p-6 text-center transition-all hover:border-opacity-70" style={{ borderColor: 'var(--border-color)' }}>
+                  <Image size={40} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                  <p className="text-sm font-medium">{bgImage ? 'Cambiar imagen' : 'Subir imagen de fondo'}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Se mostrará al entrar al himnario</p>
+                </div>
+              </label>
+              <button onClick={() => setShowBgSelector(false)} className="w-full py-3 rounded-xl text-sm font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectionMode && (
         <div className="flex items-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--accent-light)', border: '1px solid var(--accent)' }}>
@@ -938,6 +1029,31 @@ function OrdersPage({ onSelectSong, showNotification }: any) {
 
 function ToolsPage() {
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [globalBg, setGlobalBg] = useState<string | null>(null);
+  const [showBgManager, setShowBgManager] = useState(false);
+
+  // Cargar fondo global
+  useEffect(() => {
+    const saved = localStorage.getItem('global-bg-image');
+    if (saved) setGlobalBg(saved);
+  }, []);
+
+  const handleGlobalBgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setGlobalBg(result);
+      localStorage.setItem('global-bg-image', result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeGlobalBg = () => {
+    setGlobalBg(null);
+    localStorage.removeItem('global-bg-image');
+  };
 
   if (activeTool === 'metronome') return (<div className="pb-4"><button onClick={() => setActiveTool(null)} className="flex items-center gap-2 mb-4 text-sm font-semibold" style={{ color: 'var(--accent)' }}><ChevronLeft size={16} /> Volver</button><Metronome /></div>);
   if (activeTool === 'tuner') return (<div className="pb-4"><button onClick={() => setActiveTool(null)} className="flex items-center gap-2 mb-4 text-sm font-semibold" style={{ color: 'var(--accent)' }}><ChevronLeft size={16} /> Volver</button><Tuner /></div>);
@@ -945,6 +1061,63 @@ function ToolsPage() {
   return (
     <div className="space-y-4 pb-4">
       <h2 className="text-2xl font-bold">Herramientas</h2>
+      
+      {/* Sección de Fondos Personalizados */}
+      <div className="rounded-2xl border p-5" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-lg flex items-center gap-2">🖼️ Fondos Personalizados</h3>
+          <button onClick={() => setShowBgManager(!showBgManager)} className="text-xs font-semibold px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
+            {showBgManager ? 'Cerrar' : 'Gestionar'}
+          </button>
+        </div>
+        
+        {showBgManager && (
+          <div className="space-y-4 mt-4">
+            <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <h4 className="font-semibold text-sm mb-2">Fondo Global</h4>
+              <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+                Se aplicará a toda la aplicación (excepto himnarios con fondo propio)
+              </p>
+              {globalBg ? (
+                <div className="relative rounded-lg overflow-hidden mb-3" style={{ aspectRatio: '16/9' }}>
+                  <img src={globalBg} alt="Fondo global" className="w-full h-full object-cover" />
+                  <button onClick={removeGlobalBg} className="absolute top-2 right-2 p-2 rounded-full bg-black/50 text-white hover:bg-black/70">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-lg border-2 border-dashed p-4 text-center mb-3" style={{ borderColor: 'var(--border-color)' }}>
+                  <Image size={32} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Sin fondo global</p>
+                </div>
+              )}
+              <label className="cursor-pointer block">
+                <input type="file" accept="image/*" onChange={handleGlobalBgChange} className="hidden" />
+                <div className="py-3 rounded-xl text-center text-sm font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
+                  {globalBg ? 'Cambiar Fondo Global' : 'Subir Fondo Global'}
+                </div>
+              </label>
+            </div>
+
+            <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <h4 className="font-semibold text-sm mb-2">💡 Cómo funciona</h4>
+              <ul className="text-xs space-y-1" style={{ color: 'var(--text-muted)' }}>
+                <li>• Cada himnario puede tener su propio fondo (se configura al editar el himnario)</li>
+                <li>• El fondo global se usa como respaldo si el himnario no tiene fondo</li>
+                <li>• Los fondos se guardan en tu navegador</li>
+                <li>• Puedes cambiar o quitar fondos en cualquier momento</li>
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {!showBgManager && (
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            {globalBg ? '✅ Fondo global configurado' : 'Configura fondos para diferentes áreas'}
+          </p>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => setActiveTool('metronome')} className="rounded-2xl border p-5 text-center transition-all hover:scale-[1.02]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}><div className="text-4xl mb-2">🎵</div><h3 className="font-bold text-sm">Metrónomo</h3><p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>BPM, tap tempo, 3 sonidos</p></button>
         <button onClick={() => setActiveTool('tuner')} className="rounded-2xl border p-5 text-center transition-all hover:scale-[1.02]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}><div className="text-4xl mb-2">🎼</div><h3 className="font-bold text-sm">Afinador</h3><p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Guitarra, bajo, ukelele</p></button>
