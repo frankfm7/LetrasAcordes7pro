@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Song } from '../types';
 import { useApp } from '../context/AppContext';
 import { hymnals } from '../data/songs';
+import { transposeLyrics } from '../utils/chords';
 import { ChevronLeft, Save, Trash2 } from 'lucide-react';
 
 export default function SongEditor({ song, onBack }: { song: Song; onBack: () => void }) {
@@ -17,6 +18,9 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
   const [lyrics, setLyrics] = useState(song.lyrics);
   const [notes, setNotes] = useState(song.notes);
   const [hymnalId, setHymnalId] = useState(song.hymnalId);
+  
+  // Almacenar el tono original para calcular la transposición
+  const [originalKey] = useState(song.key);
 
   // allAvailableSongs no se usa aquí, eliminamos el useMemo innecesario
 
@@ -32,6 +36,26 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
 
   const handleSave = () => {
     if (!title.trim()) return;
+    
+    // Calcular la diferencia de semitonos si cambió el tono
+    let finalLyrics = lyrics;
+    if (key !== originalKey) {
+      const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      
+      // Extraer la nota base (sin 'm' si es menor)
+      const originalBase = originalKey.replace(/m$/, '');
+      const newBase = key.replace(/m$/, '');
+      
+      const originalIndex = allNotes.indexOf(originalBase);
+      const newIndex = allNotes.indexOf(newBase);
+      
+      if (originalIndex !== -1 && newIndex !== -1) {
+        const semitones = newIndex - originalIndex;
+        // Transponer todos los acordes de la letra
+        finalLyrics = transposeLyrics(lyrics, semitones);
+      }
+    }
+    
     const updatedSong: Song = {
       ...song,
       title: title.trim(),
@@ -41,7 +65,7 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
       bpm,
       language,
       categories,
-      lyrics,
+      lyrics: finalLyrics,
       notes,
       hymnalId,
     };
