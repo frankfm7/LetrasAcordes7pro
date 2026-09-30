@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Camera, Crop, Loader, Edit3, Save } from 'lucide-react';
+import { X, Camera, Crop, Loader, Save } from 'lucide-react';
 import Tesseract from 'tesseract.js';
 import { Song } from '../types';
 import { useApp } from '../context/AppContext';
@@ -14,16 +14,16 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
   const { addCustomSong } = useApp();
   const [step, setStep] = useState<'upload' | 'crop' | 'process' | 'edit'>('upload');
   const [image, setImage] = useState<string | null>(null);
-  const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [progress, setProgress] = useState(0);
   
   // Estados para el crop
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [startY, setStartY] = useState(0);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   
   // Estados para editar la canción
   const [title, setTitle] = useState('');
@@ -69,56 +69,80 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
         
         canvas.width = width;
         canvas.height = height;
+        setImageSize({ width, height });
         ctx.drawImage(img, 0, 0, width, height);
       };
       img.src = image;
     }
   }, [step, image]);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const drawRectangle = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !image) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Redibujar la imagen
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+      // Dibujar el rectángulo de selección
+      if (cropBox.width > 0 && cropBox.height > 0) {
+        ctx.strokeStyle = '#7c3aed';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
+        
+        // Oscurecer el área fuera de la selección
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, cropBox.y);
+        ctx.fillRect(0, cropBox.y + cropBox.height, canvas.width, canvas.height - cropBox.y - cropBox.height);
+        ctx.fillRect(0, cropBox.y, cropBox.x, cropBox.height);
+        ctx.fillRect(cropBox.x + cropBox.width, cropBox.y, canvas.width - cropBox.x - cropBox.width, cropBox.height);
+      }
+    };
+    img.src = image;
+  };
+
+  useEffect(() => {
+    if (step === 'crop' && image) {
+      drawRectangle();
+    }
+  }, [cropBox, step, image]);
+
+  const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
     
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const pos = getMousePos(e);
     setIsDrawing(true);
-    setStartX(x);
-    setStartY(y);
-    setCropBox({ x, y, width: 0, height: 0 });
+    setStartPos(pos);
+    setCropBox({ x: pos.x, y: pos.y, width: 0, height: 0 });
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
     
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
+    const pos = getMousePos(e);
     setCropBox({
-      x: Math.min(startX, x),
-      y: Math.min(startY, y),
-      width: Math.abs(x - startX),
-      height: Math.abs(y - startY),
+      x: Math.min(startPos.x, pos.x),
+      y: Math.min(startPos.y, pos.y),
+      width: Math.abs(pos.x - startPos.x),
+      height: Math.abs(pos.y - startPos.y),
     });
-    
-    // Redibujar canvas con el rectángulo
-    const ctx = canvas.getContext('2d');
-    if (!ctx || !image) return;
-    
-    const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = '#7c3aed';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([5, 5]);
-      ctx.strokeRect(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
-    };
-    img.src = image;
   };
 
   const handleMouseUp = () => {
@@ -126,11 +150,16 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
   };
 
   const handleCrop = () => {
-    if (cropBox.width < 10 || cropBox.height < 10) {
+    if (cropBox.width < 20 || cropBox.height < 20) {
       showNotification('Selecciona un área más grande', 'error');
       return;
     }
     
+    setStep('process');
+    processImage();
+  };
+
+  const processImage = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
@@ -155,16 +184,11 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
       cropBox.height
     );
     
-    setCroppedImage(tempCanvas.toDataURL());
-    setStep('process');
-    processImage(tempCanvas.toDataURL());
-  };
-
-  const processImage = async (imageData: string) => {
+    const croppedImageData = tempCanvas.toDataURL();
     setProgress(0);
     
     try {
-      const result = await Tesseract.recognize(imageData, 'spa', {
+      const result = await Tesseract.recognize(croppedImageData, 'spa', {
         logger: (m) => {
           if (m.status === 'recognizing text') {
             setProgress(Math.round(m.progress * 100));
@@ -209,18 +233,32 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-      <div className="w-full max-w-4xl rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4" 
+      style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-4xl rounded-2xl p-6 max-h-[90vh] overflow-y-auto" 
+        style={{ backgroundColor: 'var(--card-bg)' }}
+        onClick={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold">
+          <button
+            onClick={onClose}
+            className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+            style={{ color: 'white' }}
+            title="Volver"
+          >
+            ‹
+          </button>
+          <h3 className="text-xl font-bold flex-1 text-center">
             {step === 'upload' && 'Importar desde Imagen'}
             {step === 'crop' && 'Seleccionar Área de la Letra'}
             {step === 'process' && 'Procesando Imagen...'}
             {step === 'edit' && 'Editar Canción Importada'}
           </h3>
-          <button onClick={onClose} className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
-            <X size={20} />
-          </button>
+          <div style={{ width: '48px' }}></div>
         </div>
         
         {step === 'upload' && (
@@ -256,7 +294,11 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
               </ol>
             </div>
             
-            <div className="relative border-2 rounded-xl overflow-hidden" style={{ borderColor: 'var(--border-color)' }}>
+            <div 
+              ref={containerRef}
+              className="relative border-2 rounded-xl overflow-hidden" 
+              style={{ borderColor: 'var(--border-color)' }}
+            >
               <canvas
                 ref={canvasRef}
                 onMouseDown={handleMouseDown}
@@ -270,11 +312,15 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
             
             <div className="flex gap-2">
               <button
-                onClick={() => setStep('upload')}
+                onClick={() => {
+                  setStep('upload');
+                  setImage(null);
+                  setCropBox({ x: 0, y: 0, width: 0, height: 0 });
+                }}
                 className="flex-1 py-3 rounded-xl font-bold"
                 style={{ backgroundColor: 'var(--bg-tertiary)' }}
               >
-                ← Volver
+                ‹ Volver
               </button>
               <button
                 onClick={handleCrop}
@@ -385,7 +431,7 @@ export default function ImageImportModal({ onClose, showNotification }: ImageImp
                 className="flex-1 py-3 rounded-xl font-bold"
                 style={{ backgroundColor: 'var(--bg-tertiary)' }}
               >
-                ← Volver
+                ‹ Volver
               </button>
               <button
                 onClick={handleSave}

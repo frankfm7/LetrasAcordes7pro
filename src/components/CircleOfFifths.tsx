@@ -166,25 +166,24 @@ export default function CircleOfFifths({ currentKey = 'C', onKeySelect, onClose 
   const romanPositions = getRomanNumeralPositions();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-      <div className="relative w-full max-w-2xl rounded-2xl p-6 my-8" style={{ backgroundColor: 'var(--card-bg)' }}>
-        {/* Botón cerrar - SIEMPRE visible */}
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" 
+      style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-2xl rounded-2xl p-6 my-8" 
+        style={{ backgroundColor: 'var(--card-bg)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Botón cerrar - UN SOLO BOTÓN con flecha ‹ */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors z-50 shadow-lg"
+          className="absolute top-4 left-4 p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors z-50 shadow-lg"
           style={{ color: 'white' }}
-          title="Cerrar Círculo de Quintas"
-        >
-          <X size={24} />
-        </button>
-        
-        {/* Botón de texto "Salir" también visible */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 left-4 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 transition-colors z-50 shadow-lg font-bold text-white"
           title="Volver"
         >
-          ← Salir
+          ‹
         </button>
 
         <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: 'var(--text-primary)' }}>

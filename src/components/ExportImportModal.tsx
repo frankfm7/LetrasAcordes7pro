@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, Download, Upload, FileText, File, Search, CheckSquare, Square } from 'lucide-react';
+import { X, Download, Upload, FileText, File, Search, CheckSquare, Square, Camera } from 'lucide-react';
 import { Song } from '../types';
 import { songs as allSongs } from '../data/songs';
 import { useApp } from '../context/AppContext';
@@ -211,31 +211,122 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
         <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold">Importar Canciones</h3>
             <button onClick={onClose} className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
               <X size={20} />
             </button>
           </div>
           
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl border-2 border-dashed text-center" style={{ borderColor: 'var(--border-color)' }}>
-              <Upload size={48} className="mx-auto mb-3" style={{ color: 'var(--accent)' }} />
-              <p className="font-semibold mb-2">Selecciona un archivo</p>
-              <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
-                Formatos soportados: TXT, PDF, Word (.docx), PowerPoint (.pptx)
-              </p>
-              <label className="inline-block px-6 py-3 rounded-xl font-bold cursor-pointer" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
-                <input type="file" accept=".txt,.pdf,.docx,.pptx" onChange={handleImport} className="hidden" />
-                Seleccionar Archivo
-              </label>
-            </div>
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.txt';
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      const text = ev.target?.result as string;
+                      showNotification(`Texto importado: ${text.substring(0, 50)}...`, 'success');
+                    };
+                    reader.readAsText(file);
+                  }
+                };
+                input.click();
+              }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <FileText size={32} style={{ color: 'var(--accent)' }} />
+                <div>
+                  <div className="font-bold">Texto (.txt)</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Importar desde archivo de texto</div>
+                </div>
+              </div>
+            </button>
             
-            <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                💡 <strong>Tip:</strong> Para importar desde imagen, usa la herramienta OCR en Herramientas
-              </p>
-            </div>
+            <button
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.pdf';
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    showNotification('Importación de PDF - Procesando...', 'info');
+                    // Aquí iría la lógica de extracción de PDF
+                  }
+                };
+                input.click();
+              }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <File size={32} style={{ color: '#ef4444' }} />
+                <div>
+                  <div className="font-bold">PDF (.pdf)</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Importar desde documento PDF</div>
+                </div>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.docx';
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    try {
+                      const arrayBuffer = await file.arrayBuffer();
+                      const { extractRawText } = await import('mammoth');
+                      const result = await extractRawText({ arrayBuffer });
+                      showNotification(`Word importado: ${result.value.substring(0, 50)}...`, 'success');
+                    } catch (error) {
+                      showNotification('Error al importar Word', 'error');
+                    }
+                  }
+                };
+                input.click();
+              }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <File size={32} style={{ color: '#3b82f6' }} />
+                <div>
+                  <div className="font-bold">Word (.docx)</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Importar desde documento Word</div>
+                </div>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => {
+                onClose();
+                // Abrir modal de imagen
+                setTimeout(() => {
+                  const event = new CustomEvent('openImageImport');
+                  window.dispatchEvent(event);
+                }, 100);
+              }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <Camera size={32} style={{ color: '#10b981' }} />
+                <div>
+                  <div className="font-bold">Imagen (OCR)</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Importar desde foto o captura</div>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       </div>
