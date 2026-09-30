@@ -11,30 +11,31 @@ interface NoteInfo {
   major: string;
   minor: string;
   color: string;
-  angle: number;
+  angle: number; // ángulo en grados (0 = 12 en punto, sentido horario)
 }
 
 export default function CircleOfFifths({ currentKey = 'C', onKeySelect, onClose }: CircleOfFifthsProps) {
   const [selectedKey, setSelectedKey] = useState(currentKey);
   const [needleAngle, setNeedleAngle] = useState(0);
 
-  // Orden del círculo de quintas (sentido horario)
+  // Orden correcto del círculo de quintas empezando desde 12:00 en sentido horario
+  // C (12:00) → G (1:00) → D (2:00) → A (3:00) → E (4:00) → B (5:00) → F#/Gb (6:00) → Db/C# (7:00) → Ab/G# (8:00) → Eb/D# (9:00) → Bb/A# (10:00) → F (11:00)
   const notes: NoteInfo[] = [
-    { major: 'C', minor: 'Am', color: '#06B6D4', angle: 0 },      // 12:00
-    { major: 'G', minor: 'Em', color: '#10B981', angle: 30 },     // 1:00
-    { major: 'D', minor: 'Bm', color: '#3B82F6', angle: 60 },     // 2:00
-    { major: 'A', minor: 'F#m', color: '#8B5CF6', angle: 90 },    // 3:00
-    { major: 'E', minor: 'C#m', color: '#EC4899', angle: 120 },   // 4:00
-    { major: 'B', minor: 'G#m', color: '#F472B6', angle: 150 },   // 5:00
-    { major: 'F#/Gb', minor: 'D#m/Ebm', color: '#EF4444', angle: 180 }, // 6:00
-    { major: 'Db/C#', minor: 'Bbm/A#m', color: '#F97316', angle: 210 }, // 7:00
-    { major: 'Ab/G#', minor: 'Fm/E#m', color: '#EAB308', angle: 240 },  // 8:00
-    { major: 'Eb/D#', minor: 'Cm', color: '#FACC15', angle: 270 },      // 9:00
-    { major: 'Bb/A#', minor: 'Gm', color: '#A3E635', angle: 300 },      // 10:00
-    { major: 'F', minor: 'Dm', color: '#22C55E', angle: 330 },          // 11:00
+    { major: 'C', minor: 'Am', color: '#06B6D4', angle: 0 },      // 12:00 (0°)
+    { major: 'G', minor: 'Em', color: '#10B981', angle: 30 },     // 1:00 (30°)
+    { major: 'D', minor: 'Bm', color: '#3B82F6', angle: 60 },     // 2:00 (60°)
+    { major: 'A', minor: 'F#m', color: '#8B5CF6', angle: 90 },    // 3:00 (90°)
+    { major: 'E', minor: 'C#m', color: '#EC4899', angle: 120 },   // 4:00 (120°)
+    { major: 'B', minor: 'G#m', color: '#F472B6', angle: 150 },   // 5:00 (150°)
+    { major: 'F#/Gb', minor: 'D#m', color: '#EF4444', angle: 180 }, // 6:00 (180°)
+    { major: 'Db/C#', minor: 'Bbm', color: '#F97316', angle: 210 }, // 7:00 (210°)
+    { major: 'Ab/G#', minor: 'Fm', color: '#EAB308', angle: 240 },  // 8:00 (240°)
+    { major: 'Eb/D#', minor: 'Cm', color: '#FACC15', angle: 270 },  // 9:00 (270°)
+    { major: 'Bb/A#', minor: 'Gm', color: '#A3E635', angle: 300 },  // 10:00 (300°)
+    { major: 'F', minor: 'Dm', color: '#22C55E', angle: 330 },      // 11:00 (330°)
   ];
 
-  // Escalas para números romanos
+  // Escalas para números romanos (orden del círculo de quintas)
   const majorScales: Record<string, string[]> = {
     'C': ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
     'G': ['G', 'A', 'B', 'C', 'D', 'E', 'F#'],
@@ -98,14 +99,80 @@ export default function CircleOfFifths({ currentKey = 'C', onKeySelect, onClose 
 
   const currentScale = getCurrentScale();
 
+  // Función para crear path de pétalo en forma de escudo
+  const createPetalPath = (angle: number, innerRadius: number, outerRadius: number, width: number) => {
+    // Convertir ángulo a radianes (0° = arriba, sentido horario)
+    const rad = (angle - 90) * Math.PI / 180;
+    
+    // Centro del círculo
+    const cx = 200;
+    const cy = 200;
+    
+    // Punto central del pétalo
+    const midRadius = (innerRadius + outerRadius) / 2;
+    const midX = cx + Math.cos(rad) * midRadius;
+    const midY = cy + Math.sin(rad) * midRadius;
+    
+    // Puntos en el borde interior (más estrecho)
+    const innerWidth = width * 0.4;
+    const innerRad1 = (angle - innerWidth - 90) * Math.PI / 180;
+    const innerRad2 = (angle + innerWidth - 90) * Math.PI / 180;
+    const innerX1 = cx + Math.cos(innerRad1) * innerRadius;
+    const innerY1 = cy + Math.sin(innerRad1) * innerRadius;
+    const innerX2 = cx + Math.cos(innerRad2) * innerRadius;
+    const innerY2 = cy + Math.sin(innerRad2) * innerRadius;
+    
+    // Puntos en el borde exterior (más ancho)
+    const outerWidth = width * 0.6;
+    const outerRad1 = (angle - outerWidth - 90) * Math.PI / 180;
+    const outerRad2 = (angle + outerWidth - 90) * Math.PI / 180;
+    const outerX1 = cx + Math.cos(outerRad1) * outerRadius;
+    const outerY1 = cy + Math.sin(outerRad1) * outerRadius;
+    const outerX2 = cx + Math.cos(outerRad2) * outerRadius;
+    const outerY2 = cy + Math.sin(outerRad2) * outerRadius;
+    
+    // Crear path con curvas suaves
+    return `M ${innerX1} ${innerY1} 
+            Q ${midX} ${midY} ${outerX1} ${outerY1}
+            A ${outerRadius * 0.3} ${outerRadius * 0.3} 0 0 1 ${outerX2} ${outerY2}
+            Q ${midX} ${midY} ${innerX2} ${innerY2}
+            A ${innerRadius * 0.2} ${innerRadius * 0.2} 0 0 1 ${innerX1} ${innerY1}
+            Z`;
+  };
+
+  // Función para obtener posición de texto
+  const getTextPosition = (angle: number, radius: number) => {
+    const rad = (angle - 90) * Math.PI / 180;
+    return {
+      x: 200 + Math.cos(rad) * radius,
+      y: 200 + Math.sin(rad) * radius,
+    };
+  };
+
+  // Calcular posiciones de los números romanos basados en la nota seleccionada
+  const getRomanNumeralPositions = () => {
+    const selectedNote = notes.find(n => n.major === selectedKey || n.minor === selectedKey);
+    if (!selectedNote) return [];
+
+    const baseAngle = selectedNote.angle;
+    return romanNumerals.map((numeral, index) => {
+      // Cada número romano está a 30° de distancia en sentido horario
+      const angle = (baseAngle + index * 30) % 360;
+      const pos = getTextPosition(angle, 195);
+      return { numeral, x: pos.x, y: pos.y };
+    });
+  };
+
+  const romanPositions = getRomanNumeralPositions();
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-      <div className="relative w-full max-w-lg rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+      <div className="relative w-full max-w-2xl rounded-2xl p-6 my-8" style={{ backgroundColor: 'var(--card-bg)' }}>
         {/* Botón cerrar */}
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-700 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-700 transition-colors z-10"
             style={{ color: 'var(--text-primary)' }}
           >
             <X size={24} />
@@ -116,141 +183,151 @@ export default function CircleOfFifths({ currentKey = 'C', onKeySelect, onClose 
           Círculo de Quintas
         </h2>
 
-        {/* Círculo principal */}
-        <div className="relative mx-auto" style={{ width: '350px', height: '350px' }}>
-          {/* Círculo exterior con borde dorado */}
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{
-              backgroundColor: '#1a1a1a',
-              border: '6px solid #D4AF37',
-              boxShadow: '0 0 20px rgba(212, 175, 55, 0.3)',
-            }}
-          />
-
-          {/* Pétalos de notas */}
-          {notes.map((note, index) => {
-            const isSelected = note.major === selectedKey || note.minor === selectedKey;
-            const isRelated = note.major === selectedKey.replace('m', '') || note.minor === selectedKey;
+        {/* SVG del Círculo de Quintas */}
+        <div className="relative mx-auto" style={{ width: '100%', maxWidth: '400px', aspectRatio: '1/1' }}>
+          <svg viewBox="0 0 400 400" className="w-full h-full">
+            {/* Fondo negro del círculo */}
+            <circle cx="200" cy="200" r="180" fill="#1a1a1a" />
             
-            return (
-              <div
-                key={index}
-                className="absolute"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  top: 0,
-                  left: 0,
-                  transform: `rotate(${note.angle}deg)`,
+            {/* Anillo dorado exterior */}
+            <circle cx="200" cy="200" r="180" fill="none" stroke="#D4AF37" strokeWidth="7" />
+            <circle cx="200" cy="200" r="173" fill="none" stroke="#D4AF37" strokeWidth="1" opacity="0.5" />
+
+            {/* Pétalos de notas mayores (anillo exterior) */}
+            {notes.map((note, index) => {
+              const isSelected = note.major === selectedKey || note.minor === selectedKey;
+              const isRelated = note.major === selectedKey.replace('m', '') || note.minor === selectedKey;
+              const path = createPetalPath(note.angle, 110, 170, 12);
+              
+              return (
+                <g key={`major-${index}`} style={{ cursor: 'pointer' }}>
+                  <path
+                    d={path}
+                    fill={note.color}
+                    stroke={isSelected && !selectedKey.endsWith('m') ? 'white' : isRelated ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
+                    strokeWidth={isSelected ? 3 : isRelated ? 2 : 1}
+                    opacity={isSelected ? 1 : 0.9}
+                    onClick={() => handleNoteClick(note, false)}
+                    style={{
+                      transition: 'all 0.3s ease',
+                      filter: isSelected ? 'brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.6))' : 'none',
+                    }}
+                  />
+                  {/* Texto de la nota mayor */}
+                  {(() => {
+                    const pos = getTextPosition(note.angle, 145);
+                    return (
+                      <text
+                        x={pos.x}
+                        y={pos.y}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="white"
+                        fontSize="18"
+                        fontWeight="bold"
+                        style={{ pointerEvents: 'none', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
+                      >
+                        {note.major}
+                      </text>
+                    );
+                  })()}
+                </g>
+              );
+            })}
+
+            {/* Pétalos de notas menores (anillo interior) */}
+            {notes.map((note, index) => {
+              const isSelected = note.minor === selectedKey;
+              const isRelated = note.major === selectedKey;
+              const path = createPetalPath(note.angle, 60, 105, 10);
+              
+              return (
+                <g key={`minor-${index}`} style={{ cursor: 'pointer' }}>
+                  <path
+                    d={path}
+                    fill={note.color}
+                    stroke={isSelected ? 'white' : isRelated ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
+                    strokeWidth={isSelected ? 3 : isRelated ? 2 : 1}
+                    opacity={isSelected ? 1 : 0.7}
+                    onClick={() => handleNoteClick(note, true)}
+                    style={{
+                      transition: 'all 0.3s ease',
+                      filter: isSelected ? 'brightness(1.2) drop-shadow(0 0 8px rgba(255,255,255,0.6))' : 'none',
+                    }}
+                  />
+                  {/* Texto de la nota menor */}
+                  {(() => {
+                    const pos = getTextPosition(note.angle, 85);
+                    return (
+                      <text
+                        x={pos.x}
+                        y={pos.y}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="white"
+                        fontSize="12"
+                        fontWeight="bold"
+                        style={{ pointerEvents: 'none', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
+                      >
+                        {note.minor}
+                      </text>
+                    );
+                  })()}
+                </g>
+              );
+            })}
+
+            {/* Centro dorado */}
+            <circle cx="200" cy="200" r="45" fill="#D4AF37" />
+            <circle cx="200" cy="200" r="40" fill="#1a1a1a" />
+            <circle cx="200" cy="200" r="35" fill="#D4AF37" opacity="0.3" />
+
+            {/* Aguja central */}
+            <g style={{ 
+              transform: `rotate(${needleAngle}deg)`,
+              transformOrigin: '200px 200px',
+              transition: 'transform 0.5s ease-out'
+            }}>
+              {/* Línea de la aguja */}
+              <line
+                x1="200"
+                y1="200"
+                x2="200"
+                y2="60"
+                stroke="#4169E1"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              {/* Punta de la aguja */}
+              <polygon
+                points="200,50 195,70 205,70"
+                fill="#4169E1"
+              />
+              {/* Centro de la aguja */}
+              <circle cx="200" cy="200" r="8" fill="#4169E1" />
+              <circle cx="200" cy="200" r="4" fill="white" />
+            </g>
+
+            {/* Números romanos (fijos alrededor del círculo) */}
+            {romanPositions.map((pos, index) => (
+              <text
+                key={`roman-${index}`}
+                x={pos.x}
+                y={pos.y}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="#D4AF37"
+                fontSize="14"
+                fontWeight="bold"
+                style={{ 
+                  textShadow: '0 0 5px rgba(212, 175, 55, 0.8)',
+                  transition: 'all 0.3s ease'
                 }}
               >
-                {/* Pétalo mayor */}
-                <button
-                  onClick={() => handleNoteClick(note, false)}
-                  className="absolute transition-all duration-200 hover:scale-110"
-                  style={{
-                    width: '70px',
-                    height: '90px',
-                    top: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: note.color,
-                    borderRadius: '35px 35px 15px 15px',
-                    border: isSelected && !selectedKey.endsWith('m') ? '3px solid white' : isRelated ? '2px solid rgba(255,255,255,0.5)' : 'none',
-                    boxShadow: isSelected ? '0 0 15px rgba(255,255,255,0.8)' : '0 4px 8px rgba(0,0,0,0.3)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span className="text-white font-bold text-lg">{note.major}</span>
-                </button>
-
-                {/* Pétalo menor */}
-                <button
-                  onClick={() => handleNoteClick(note, true)}
-                  className="absolute transition-all duration-200 hover:scale-110"
-                  style={{
-                    width: '50px',
-                    height: '60px',
-                    top: '115px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: note.color,
-                    opacity: 0.7,
-                    borderRadius: '25px 25px 10px 10px',
-                    border: isSelected && selectedKey.endsWith('m') ? '3px solid white' : isRelated ? '2px solid rgba(255,255,255,0.5)' : 'none',
-                    boxShadow: isSelected ? '0 0 15px rgba(255,255,255,0.8)' : '0 2px 4px rgba(0,0,0,0.3)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span className="text-white font-bold text-xs">{note.minor}</span>
-                </button>
-              </div>
-            );
-          })}
-
-          {/* Centro del círculo con aguja */}
-          <div
-            className="absolute rounded-full"
-            style={{
-              width: '60px',
-              height: '60px',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: '#D4AF37',
-              boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)',
-              zIndex: 10,
-            }}
-          >
-            {/* Aguja */}
-            <div
-              className="absolute transition-transform duration-500 ease-out"
-              style={{
-                width: '4px',
-                height: '80px',
-                backgroundColor: '#4169E1',
-                top: '-50px',
-                left: '50%',
-                transformOrigin: 'bottom center',
-                transform: `translateX(-50%) rotate(${needleAngle}deg)`,
-                borderRadius: '2px',
-                boxShadow: '0 0 5px rgba(65, 105, 225, 0.8)',
-              }}
-            />
-          </div>
-
-          {/* Números romanos */}
-          {romanNumerals.map((numeral, index) => {
-            const angle = (index * 360) / 7;
-            const radius = 190;
-            const x = Math.cos((angle - 90) * Math.PI / 180) * radius;
-            const y = Math.sin((angle - 90) * Math.PI / 180) * radius;
-            
-            return (
-              <div
-                key={index}
-                className="absolute text-sm font-bold"
-                style={{
-                  top: `calc(50% + ${y}px)`,
-                  left: `calc(50% + ${x}px)`,
-                  transform: 'translate(-50%, -50%)',
-                  color: '#D4AF37',
-                  textShadow: '0 0 5px rgba(212, 175, 55, 0.5)',
-                }}
-              >
-                {numeral}
-              </div>
-            );
-          })}
+                {pos.numeral}
+              </text>
+            ))}
+          </svg>
         </div>
 
         {/* Información de la escala actual */}
@@ -278,7 +355,8 @@ export default function CircleOfFifths({ currentKey = 'C', onKeySelect, onClose 
 
         {/* Instrucciones */}
         <div className="mt-4 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-          <p>Haz clic en una nota mayor (pétalo grande) o menor (pétalo pequeño) para transponer la canción</p>
+          <p>💡 Haz clic en una nota mayor (pétalo exterior) o menor (pétalo interior) para transponer la canción</p>
+          <p className="mt-1 text-xs">Los números romanos muestran los grados de la escala seleccionada</p>
         </div>
       </div>
     </div>
