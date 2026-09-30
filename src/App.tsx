@@ -252,13 +252,13 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) 
           <h2 className="text-lg font-bold flex items-center gap-2"><span>📚</span> Cancioneros</h2>
           <button onClick={onAddHymnal} className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={14} /> Nuevo</button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
           {allHymnals.map((hymnal) => {
             const hymnalSongs = allAvailableSongs.filter(s => s.hymnalId === hymnal.id);
             return (
-              <button key={hymnal.id} onClick={() => onSelectHymnal(hymnal)} className="rounded-2xl relative overflow-hidden p-4 flex flex-col justify-between text-left transition-all hover:scale-[1.03] active:scale-[0.97]" style={{ aspectRatio: '3/4', background: hymnal.image ? `linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${hymnal.image}) center/cover` : `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 8px 24px ${hymnal.color}66` }}>
-                <div><div className="text-5xl mb-3">{hymnal.icon}</div><div className="text-white font-bold text-lg leading-tight mb-2" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
-                <div><div className="text-white/90 text-sm font-semibold" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/70 text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
+              <button key={hymnal.id} onClick={() => onSelectHymnal(hymnal)} className="rounded-xl sm:rounded-2xl relative overflow-hidden p-2 sm:p-4 flex flex-col justify-between text-left transition-all hover:scale-[1.03] active:scale-[0.97]" style={{ aspectRatio: '3/4', background: hymnal.image ? `linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${hymnal.image}) center/cover` : `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 4px 12px ${hymnal.color}44` }}>
+                <div><div className="text-3xl sm:text-5xl mb-1 sm:mb-3">{hymnal.icon}</div><div className="text-white font-bold text-xs sm:text-lg leading-tight mb-1 sm:mb-2" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
+                <div><div className="text-white/90 text-xs sm:text-sm font-semibold" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/70 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
               </button>
             );
           })}
