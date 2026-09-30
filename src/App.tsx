@@ -388,7 +388,24 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
         const containerRect = container.getBoundingClientRect();
         const elementRect = (element as HTMLElement).getBoundingClientRect();
         const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+        
+        // Guardar estado del auto-scroll
+        const wasAutoScrolling = isAutoScrolling;
+        
+        // Pausar auto-scroll si está activo
+        if (isAutoScrolling) {
+          setIsAutoScrolling(false);
+        }
+        
+        // Navegar a la sección
         container.scrollTo({ top: relativeTop - 80, behavior: 'smooth' });
+        
+        // Reanudar auto-scroll después de 2 segundos si estaba activo
+        if (wasAutoScrolling) {
+          setTimeout(() => {
+            setIsAutoScrolling(true);
+          }, 2000);
+        }
       }
     }
   };
@@ -546,15 +563,15 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
 
       {/* Sistema de 4 botones de transposición */}
       <div className="flex-shrink-0 mb-2">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {/* Botón 1: Tono Original */}
           <button
             onClick={() => handleKeyButtonClick(0, null)}
-            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeKey === null ? 'ring-2 ring-offset-2 ring-purple-500 scale-105' : ''}`}
+            className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${activeKey === null ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`}
             style={{ 
               backgroundColor: activeKey === null ? 'var(--accent)' : 'var(--bg-tertiary)', 
               color: activeKey === null ? 'white' : 'var(--text-secondary)',
-              minWidth: '60px'
+              minWidth: '36px'
             }}
             title="Tono original"
           >
@@ -568,13 +585,13 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onDoubleClick={() => handleDoubleClick(1)}
-            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeKey === customKeys.key1 ? 'ring-2 ring-offset-2 ring-purple-500 scale-105' : ''}`}
+            className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${activeKey === customKeys.key1 ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`}
             style={{ 
               backgroundColor: activeKey === customKeys.key1 ? 'var(--accent)' : 'var(--bg-tertiary)', 
               color: activeKey === customKeys.key1 ? 'white' : 'var(--text-secondary)',
-              minWidth: '60px'
+              minWidth: '36px'
             }}
-            title={customKeys.key1 ? `${customKeys.key1} (clic largo para editar)` : 'Sin tono asignado (clic largo para editar)'}
+            title={customKeys.key1 ? `${customKeys.key1} (clic largo para editar)` : 'Sin tono (clic largo para editar)'}
           >
             {customKeys.key1 || '+'}
           </button>
@@ -586,13 +603,13 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onDoubleClick={() => handleDoubleClick(2)}
-            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeKey === customKeys.key2 ? 'ring-2 ring-offset-2 ring-purple-500 scale-105' : ''}`}
+            className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${activeKey === customKeys.key2 ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`}
             style={{ 
               backgroundColor: activeKey === customKeys.key2 ? 'var(--accent)' : 'var(--bg-tertiary)', 
               color: activeKey === customKeys.key2 ? 'white' : 'var(--text-secondary)',
-              minWidth: '60px'
+              minWidth: '36px'
             }}
-            title={customKeys.key2 ? `${customKeys.key2} (clic largo para editar)` : 'Sin tono asignado (clic largo para editar)'}
+            title={customKeys.key2 ? `${customKeys.key2} (clic largo para editar)` : 'Sin tono (clic largo para editar)'}
           >
             {customKeys.key2 || '+'}
           </button>
@@ -604,20 +621,17 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onDoubleClick={() => handleDoubleClick(3)}
-            className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${activeKey === customKeys.key3 ? 'ring-2 ring-offset-2 ring-purple-500 scale-105' : ''}`}
+            className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${activeKey === customKeys.key3 ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`}
             style={{ 
               backgroundColor: activeKey === customKeys.key3 ? 'var(--accent)' : 'var(--bg-tertiary)', 
               color: activeKey === customKeys.key3 ? 'white' : 'var(--text-secondary)',
-              minWidth: '60px'
+              minWidth: '36px'
             }}
-            title={customKeys.key3 ? `${customKeys.key3} (clic largo para editar)` : 'Sin tono asignado (clic largo para editar)'}
+            title={customKeys.key3 ? `${customKeys.key3} (clic largo para editar)` : 'Sin tono (clic largo para editar)'}
           >
             {customKeys.key3 || '+'}
           </button>
         </div>
-        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-          💡 Clic largo (1s) o doble clic en los botones + para editar
-        </p>
       </div>
 
       {showConfig && (
