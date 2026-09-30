@@ -62,10 +62,9 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
   };
 
   const exportAsText = (songs: Song[]) => {
-    const content = songs.map((song, index) => {
+    const content = songs.map((song) => {
       const lyrics = song.lyrics.replace(/\/\/[^\n]*\n/g, '').trim();
-      return `=== CANCIÓN ${index + 1} ===
-Título: ${song.title}
+      return `Título: ${song.title}
 Artista: ${song.artist}
 Tonalidad: ${song.key}
 Compás: ${song.timeSignature}
@@ -73,9 +72,8 @@ BPM: ${song.bpm}
 Idioma: ${song.language}
 Categorías: ${song.categories.join(', ')}
 ---
-${lyrics}
-=== FIN CANCIÓN ${index + 1} ===`;
-    }).join('\n\n');
+${lyrics}`;
+    }).join('\n\n===\n\n');
     
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -95,15 +93,9 @@ ${lyrics}
       songs.forEach((song, index) => {
         if (index > 0) doc.addPage();
         
-        // Delimitador visual
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`=== CANCIÓN ${index + 1} ===`, 20, 10);
-        
         // Título
         doc.setFontSize(20);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0);
         doc.text(song.title, 20, 20);
         
         // Artista
@@ -125,12 +117,6 @@ ${lyrics}
         const lyrics = song.lyrics.replace(/\/\/[^\n]*\n/g, '').trim();
         const lines = doc.splitTextToSize(lyrics, 170);
         doc.text(lines, 20, 60);
-        
-        // Delimitador final
-        const pageHeight = doc.internal.pageSize.height;
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`=== FIN CANCIÓN ${index + 1} ===`, 20, pageHeight - 10);
       });
       
       doc.save(`${songs.length === 1 ? songs[0].title : 'canciones'}_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -149,13 +135,6 @@ ${lyrics}
       const sections = songs.map((song, index) => {
         const lyrics = song.lyrics.replace(/\/\/[^\n]*\n/g, '').trim();
         const paragraphs = [
-          // Delimitador inicial
-          new Paragraph({
-            children: [
-              new TextRun({ text: `=== CANCIÓN ${index + 1} ===`, size: 16, color: '999999', italics: true }),
-            ],
-            spacing: { after: 200 },
-          }),
           // Título
           new Paragraph({
             text: song.title,
@@ -200,15 +179,16 @@ ${lyrics}
               spacing: { after: 100 },
             })
           ),
-          // Delimitador final
-          new Paragraph({
-            children: [
-              new TextRun({ text: `=== FIN CANCIÓN ${index + 1} ===`, size: 16, color: '999999', italics: true }),
-            ],
-            spacing: { after: 400 },
-          }),
-          // Espacio entre canciones
-          new Paragraph({ text: '', spacing: { after: 400 } }),
+          // Separador entre canciones (excepto la última)
+          ...(index < songs.length - 1 ? [
+            new Paragraph({
+              children: [
+                new TextRun({ text: '===', size: 20, color: '999999' }),
+              ],
+              spacing: { before: 400, after: 400 },
+              alignment: 'center',
+            }),
+          ] : []),
         ];
         return paragraphs;
       }).flat();
@@ -254,25 +234,24 @@ ${lyrics}
   const parseMultipleSongs = (text: string): Song[] => {
     const songs: Song[] = [];
     
-    // Buscar patrones de canciones delimitadas
-    const songPattern = /=== CANCIÓN \d+ ===\n([\s\S]*?)=== FIN CANCIÓN \d+ ===/g;
-    let match;
+    // Dividir por líneas de separación (=== o más)
+    const songBlocks = text.split(/\n\s*={3,}\s*\n/);
     
-    while ((match = songPattern.exec(text)) !== null) {
-      const songBlock = match[1];
+    songBlocks.forEach((block, index) => {
+      if (!block.trim()) return;
       
       // Extraer metadata
-      const titleMatch = songBlock.match(/Título: (.+)/);
-      const artistMatch = songBlock.match(/Artista: (.+)/);
-      const keyMatch = songBlock.match(/Tonalidad: (.+)/);
-      const timeSigMatch = songBlock.match(/Compás: (.+)/);
-      const bpmMatch = songBlock.match(/BPM: (.+)/);
-      const langMatch = songBlock.match(/Idioma: (.+)/);
-      const catMatch = songBlock.match(/Categorías: (.+)/);
+      const titleMatch = block.match(/Título:\s*(.+)/i);
+      const artistMatch = block.match(/Artista:\s*(.+)/i);
+      const keyMatch = block.match(/Tonalidad:\s*(.+)/i);
+      const timeSigMatch = block.match(/Compás:\s*(.+)/i);
+      const bpmMatch = block.match(/BPM:\s*(.+)/i);
+      const langMatch = block.match(/Idioma:\s*(.+)/i);
+      const catMatch = block.match(/Categorías:\s*(.+)/i);
       
       // Extraer letra (después de ---)
-      const lyricsStart = songBlock.indexOf('---');
-      const lyrics = lyricsStart !== -1 ? songBlock.substring(lyricsStart + 3).trim() : '';
+      const lyricsStart = block.indexOf('---');
+      const lyrics = lyricsStart !== -1 ? block.substring(lyricsStart + 3).trim() : block.trim();
       
       if (titleMatch) {
         songs.push({
@@ -280,7 +259,7 @@ ${lyrics}
           title: titleMatch[1].trim(),
           artist: artistMatch ? artistMatch[1].trim() : 'Desconocido',
           code: `IMP${Date.now().toString().slice(-4)}${songs.length}`,
-          hymnalId: 'alabanzas', // Default, se puede cambiar después
+          hymnalId: 'alabanzas',
           key: keyMatch ? keyMatch[1].trim() : 'C',
           timeSignature: timeSigMatch ? timeSigMatch[1].trim() : '4/4',
           bpm: bpmMatch ? parseInt(bpmMatch[1].trim()) : 100,
@@ -291,9 +270,32 @@ ${lyrics}
           notes: 'Importado desde archivo',
         });
       }
-    }
+    });
     
     return songs;
+  };
+
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    const pdfjsLib = await import('pdfjs-dist');
+    
+    // Configurar el worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    
+    let fullText = '';
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      fullText += pageText + '\n\n';
+    }
+    
+    return fullText;
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -329,7 +331,27 @@ ${lyrics}
           setShowEditor(true);
         }
       } else if (extension === 'pdf') {
-        showNotification('Importación de PDF - Funcionalidad en desarrollo', 'info');
+        showNotification('Extrayendo texto del PDF...', 'info');
+        const text = await extractTextFromPDF(file);
+        
+        // Intentar parsear múltiples canciones
+        const parsedSongs = parseMultipleSongs(text);
+        
+        if (parsedSongs.length > 1) {
+          const confirmed = window.confirm(
+            `Se detectaron ${parsedSongs.length} canciones en el PDF.\n\n` +
+            `¿Deseas importar todas las canciones?`
+          );
+          
+          if (confirmed) {
+            parsedSongs.forEach(song => addCustomSong(song));
+            showNotification(`${parsedSongs.length} canciones importadas exitosamente`, 'success');
+            onClose();
+          }
+        } else {
+          setImportedText(text);
+          setShowEditor(true);
+        }
       } else if (extension === 'docx') {
         const arrayBuffer = await file.arrayBuffer();
         const { extractRawText } = await import('mammoth');
