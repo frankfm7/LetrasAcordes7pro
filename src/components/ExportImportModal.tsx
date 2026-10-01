@@ -14,32 +14,26 @@ interface ExportImportModalProps {
 export default function ExportImportModal({ onClose, mode, showNotification }: ExportImportModalProps) {
   const { state, addCustomSong, addMultipleCustomSongs } = useApp();
   
-  // Estados de exportación
-  const [exportStep, setExportStep] = useState<'choice' | 'select' | 'format'>('choice');
+  const [exportStep, setExportStep] = useState<'choice' | 'single' | 'batch' | 'format'>('choice');
   const [exportType, setExportType] = useState<'single' | 'batch'>('single');
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [exportFormat, setExportFormat] = useState<'text' | 'pdf' | 'word'>('text');
   
-  // Estados de importación
   const [importStep, setImportStep] = useState<'choice' | 'analyze' | 'select-hymnal' | 'edit' | 'select-hymnal-for-save'>('choice');
   const [parsedSongs, setParsedSongs] = useState<any[]>([]);
   const [selectedHymnalId, setSelectedHymnalId] = useState<string>('mis-canciones');
   const [editingSongIndex, setEditingSongIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editLyrics, setEditLyrics] = useState('');
+  const [tempHymnalIdForSave, setTempHymnalIdForSave] = useState<string>('mis-canciones');
 
   // CORRECCIÓN 1: Evitar duplicación de canciones
   const allAvailableSongs = useMemo(() => {
-    // Crear un mapa de canciones personalizadas por ID
     const customSongsMap = new Map(state.customSongs.map(s => [s.id, s]));
-    
-    // Combinar canciones predefinidas con personalizadas, evitando duplicados
     const combinedSongs = allSongs.map(song => customSongsMap.get(song.id) || song);
-    
-    // Agregar canciones personalizadas que no están en las predefinidas
     const defaultSongIds = new Set(allSongs.map(s => s.id));
     const newCustomSongs = state.customSongs.filter(s => !defaultSongIds.has(s.id));
-    
     return [...combinedSongs, ...newCustomSongs];
   }, [state.customSongs]);
 
@@ -54,20 +48,78 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
     );
   }, [searchQuery, allAvailableSongs]);
 
-  // CORRECCIÓN 2: Usar prefijo correcto del cancionero
+  const toggleSongSelection = (songId: string) => {
+    const newSelected = new Set(selectedSongs);
+    if (newSelected.has(songId)) newSelected.delete(songId);
+    else newSelected.add(songId);
+    setSelectedSongs(newSelected);
+  };
+
+  const selectAll = () => {
+    if (selectedSongs.size === filteredSongs.length) {
+      setSelectedSongs(new Set());
+    } else {
+      setSelectedSongs(new Set(filteredSongs.map(s => s.id)));
+    }
+  };
+
+  const exportAsText = (songs: Song[]) => {
+    const content = songs.map((song) => {
+      const lyrics = song.lyrics.replace(/\/\/[^\n]*\n/g, '').trim();
+      return `Título: ${song.title}
+Artista: ${song.artist}
+Tonalidad: ${song.key}
+Compás: ${song.timeSignature}
+BPM: ${song.bpm}
+Idioma: ${song.language}
+Categorías: ${song.categories.join(', ')}
+---
+${lyrics}`;
+    }).join('\n\n===\n\n');
+    
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${songs.length === 1 ? songs[0].title : 'canciones'}_${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification('Exportado como texto', 'success');
+  };
+
+  const handleExport = () => {
+    const songsToExport = exportType === 'single' 
+      ? [allAvailableSongs.find(s => s.id === Array.from(selectedSongs)[0])!]
+      : Array.from(selectedSongs).map(id => allAvailableSongs.find(s => s.id === id)!).filter(Boolean);
+    
+    if (songsToExport.length === 0) {
+      showNotification('Selecciona al menos una canción', 'error');
+      return;
+    }
+    
+    switch (exportFormat) {
+      case 'text':
+        exportAsText(songsToExport);
+        break;
+      case 'pdf':
+        showNotification('Exportación a PDF próximamente', 'info');
+        break;
+      case 'word':
+        showNotification('Exportación a Word próximamente', 'info');
+        break;
+    }
+    
+    onClose();
+  };
+
   const parseMultipleSongs = (text: string): any[] => {
     const songs: any[] = [];
-    
-    // Dividir por líneas de separación (3 o más signos =)
     const songBlocks = text.split(/\n\s*={3,}\s*\n/);
     
     songBlocks.forEach((block) => {
       if (!block.trim()) return;
       
-      // Extraer título inteligente
-      const title = extractTitle(block);
-      
-      // Extraer metadata
+      const titleMatch = block.match(/Título:\s*(.+)/i);
       const artistMatch = block.match(/Artista:\s*(.+)/i);
       const keyMatch = block.match(/Tonalidad:\s*(.+)/i);
       const timeSigMatch = block.match(/Compás:\s*(.+)/i);
@@ -75,20 +127,19 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
       const langMatch = block.match(/Idioma:\s*(.+)/i);
       const catMatch = block.match(/Categorías:\s*(.+)/i);
       
-      // Extraer letra (después de ---)
       const lyricsStart = block.indexOf('---');
       const lyrics = lyricsStart !== -1 ? block.substring(lyricsStart + 3).trim() : block.trim();
       
-      if (title && title !== 'Sin título') {
+      if (titleMatch) {
         songs.push({
-          title,
+          title: titleMatch[1].trim(),
           artist: artistMatch ? artistMatch[1].trim() : 'Desconocido',
           key: keyMatch ? keyMatch[1].trim() : 'C',
           timeSignature: timeSigMatch ? timeSigMatch[1].trim() : '4/4',
           bpm: bpmMatch ? parseInt(bpmMatch[1].trim()) : 100,
           language: langMatch ? langMatch[1].trim() : 'Castellano',
           categories: catMatch ? catMatch[1].split(',').map(c => c.trim()) : ['General'],
-          lyrics,
+          lyrics: lyrics,
         });
       }
     });
@@ -96,26 +147,7 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
     return songs;
   };
 
-  const extractTitle = (text: string): string => {
-    const lines = text.split('\n').filter(l => l.trim());
-    if (lines.length === 0) return 'Sin título';
-    
-    const firstLine = lines[0].trim();
-    const isChords = /^\/\/[A-G]/.test(firstLine) || /^[A-G][#b]?\s+[A-G]/.test(firstLine);
-    
-    if (isChords && lines.length > 1) {
-      return lines[1].trim();
-    }
-    
-    for (const line of lines.slice(0, 5)) {
-      const titleMatch = line.match(/(?:Título|Title|Nombre):\s*(.+)/i);
-      if (titleMatch) return titleMatch[1].trim();
-    }
-    
-    return firstLine;
-  };
-
-  // CORRECCIÓN 2: Guardar canciones con prefijo correcto
+  // CORRECCIÓN 2: Usar prefijo correcto del cancionero
   const saveParsedSongs = () => {
     const selectedHymnal = [...hymnals, ...state.customHymnals].find(h => h.id === selectedHymnalId);
     if (!selectedHymnal) {
@@ -123,13 +155,13 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
       return;
     }
     
-    // CORRECCIÓN 1: Usar solo canciones personalizadas para calcular el siguiente número
+    // CORRECCIÓN: Usar solo canciones personalizadas para calcular el siguiente número
     const allCustomSongs = state.customSongs;
     let currentNumber = getNextSongNumber(selectedHymnalId, allCustomSongs);
     
     const timestamp = Date.now();
     const newSongs: Song[] = parsedSongs.map((song, index) => {
-      // CORRECCIÓN 2: Generar código con prefijo del cancionero
+      // CORRECCIÓN: Generar código con prefijo del cancionero
       const code = generateSongCode(selectedHymnal, currentNumber + index);
       return {
         id: `custom-${timestamp}-${index}`,
@@ -154,21 +186,27 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
     onClose();
   };
 
+  const openHymnalSelectionForSave = () => {
+    setTempHymnalIdForSave(selectedHymnalId);
+    setImportStep('select-hymnal-for-save');
+  };
+
+  // CORRECCIÓN 2: Usar prefijo correcto del cancionero
   const saveEditedSongWithHymnal = () => {
     if (editingSongIndex === null) return;
     
     const song = parsedSongs[editingSongIndex];
-    const selectedHymnal = [...hymnals, ...state.customHymnals].find(h => h.id === selectedHymnalId);
+    const selectedHymnal = [...hymnals, ...state.customHymnals].find(h => h.id === tempHymnalIdForSave);
     if (!selectedHymnal) {
       showNotification('Cancionero no encontrado', 'error');
       return;
     }
     
-    // CORRECCIÓN 1: Usar solo canciones personalizadas
+    // CORRECCIÓN: Usar solo canciones personalizadas
     const allCustomSongs = state.customSongs;
-    const nextNumber = getNextSongNumber(selectedHymnalId, allCustomSongs);
+    const nextNumber = getNextSongNumber(tempHymnalIdForSave, allCustomSongs);
     
-    // CORRECCIÓN 2: Generar código con prefijo del cancionero
+    // CORRECCIÓN: Generar código con prefijo del cancionero
     const code = generateSongCode(selectedHymnal, nextNumber);
     
     const newSong: Song = {
@@ -177,7 +215,7 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
       artist: song.artist,
       code,
       number: nextNumber,
-      hymnalId: selectedHymnalId,
+      hymnalId: tempHymnalIdForSave,
       key: song.key,
       timeSignature: song.timeSignature,
       bpm: song.bpm,
@@ -203,34 +241,57 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
     }
   };
 
-  const handleFileImport = async (file: File) => {
+  const saveChangesOnly = () => {
+    if (editingSongIndex === null) return;
+    
+    const updatedSongs = [...parsedSongs];
+    updatedSongs[editingSongIndex] = {
+      ...updatedSongs[editingSongIndex],
+      title: editTitle,
+      lyrics: editLyrics,
+    };
+    setParsedSongs(updatedSongs);
+    
+    showNotification('Cambios guardados en la lista', 'success');
+    
+    if (parsedSongs.length > 1) {
+      setImportStep('select-hymnal');
+    } else {
+      setImportStep('choice');
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
     try {
       const extension = file.name.split('.').pop()?.toLowerCase();
-      let text = '';
       
       if (extension === 'txt') {
-        text = await file.text();
+        const text = await file.text();
+        const parsedSongsResult = parseMultipleSongs(text);
+        
+        if (parsedSongsResult.length > 1) {
+          const confirmed = window.confirm(
+            `Se detectaron ${parsedSongsResult.length} canciones en el archivo.\n\n¿Deseas importar todas las canciones?`
+          );
+          
+          if (confirmed) {
+            setParsedSongs(parsedSongsResult);
+            setImportStep('select-hymnal');
+          }
+        } else if (parsedSongsResult.length === 1) {
+          setParsedSongs(parsedSongsResult);
+          setEditingSongIndex(0);
+          setEditTitle(parsedSongsResult[0].title);
+          setEditLyrics(parsedSongsResult[0].lyrics);
+          setImportStep('edit');
+        } else {
+          showNotification('No se encontraron canciones en el archivo', 'error');
+        }
       } else {
         showNotification('Formato no soportado', 'error');
-        return;
-      }
-      
-      const songs = parseMultipleSongs(text);
-      
-      if (songs.length === 0) {
-        showNotification('No se encontraron canciones en el archivo', 'error');
-        return;
-      }
-      
-      setParsedSongs(songs);
-      
-      if (songs.length === 1) {
-        setEditingSongIndex(0);
-        setEditTitle(songs[0].title);
-        setEditLyrics(songs[0].lyrics);
-        setImportStep('edit');
-      } else {
-        setImportStep('select-hymnal');
       }
     } catch (error) {
       console.error('Error importing:', error);
@@ -238,21 +299,20 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
     }
   };
 
-  // Renderizado del modal
   if (mode === 'import') {
     if (importStep === 'choice') {
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
           <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <button onClick={onClose} className="p-3 rounded-full bg-gray-700 hover:bg-gray-600" style={{ color: 'white' }}>‹</button>
+              <button onClick={onClose} className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors" style={{ color: 'white' }}>‹</button>
               <h3 className="text-xl font-bold flex-1 text-center">Importar Canciones</h3>
               <div style={{ width: '48px' }}></div>
             </div>
             
             <div className="space-y-3">
               <label className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all cursor-pointer block" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-                <input type="file" accept=".txt" onChange={(e) => e.target.files?.[0] && handleFileImport(e.target.files[0])} className="hidden" />
+                <input type="file" accept=".txt" onChange={handleImport} className="hidden" />
                 <div className="flex items-center gap-3">
                   <FileText size={32} style={{ color: 'var(--accent)' }} />
                   <div>
@@ -375,18 +435,10 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
               <div style={{ width: '48px' }}></div>
             </div>
             
-            <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: 'var(--accent-light)', border: '2px solid var(--accent)' }}>
-              <p className="text-sm font-semibold mb-2">📍 ¿Dónde se guardará?</p>
-              <select
-                value={selectedHymnalId}
-                onChange={e => setSelectedHymnalId(e.target.value)}
-                className="w-full p-2 rounded-lg border text-sm"
-                style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-              >
-                {[...hymnals, ...state.customHymnals].map(h => (
-                  <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
-                ))}
-              </select>
+            <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                💡 Los cambios se guardarán en la lista de canciones detectadas. Podrás exportarlas o guardarlas en un cancionero después.
+              </p>
             </div>
             
             <div className="space-y-4">
@@ -412,9 +464,12 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
                   style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
                   placeholder="Edita la letra y agrega los acordes con // al inicio de cada línea"
                 />
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  💡 Usa // antes de los acordes. Ejemplo: //Am F Em Am
+                </p>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => {
                     if (parsedSongs.length > 1) {
@@ -423,18 +478,26 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
                       setImportStep('choice');
                     }
                   }}
-                  className="flex-1 py-3 rounded-xl font-bold"
+                  className="flex-1 py-3 rounded-xl font-bold text-sm"
                   style={{ backgroundColor: 'var(--bg-tertiary)' }}
                 >
                   ‹ Cancelar
                 </button>
                 <button
-                  onClick={saveEditedSongWithHymnal}
+                  onClick={saveChangesOnly}
                   disabled={!editTitle.trim()}
-                  className="flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+                >
+                  💾 Guardar cambios
+                </button>
+                <button
+                  onClick={openHymnalSelectionForSave}
+                  disabled={!editTitle.trim()}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
                   style={{ backgroundColor: 'var(--accent)', color: 'white' }}
                 >
-                  <Save size={18} /> Guardar en cancionero
+                  💾 Guardar esta canción en cancionero
                 </button>
               </div>
             </div>
@@ -442,6 +505,268 @@ export default function ExportImportModal({ onClose, mode, showNotification }: E
         </div>
       );
     }
+
+    if (importStep === 'select-hymnal-for-save' && editingSongIndex !== null) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
+          <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => setImportStep('edit')}
+                className="p-3 rounded-full bg-gray-700 hover:bg-gray-600"
+                style={{ color: 'white' }}
+              >
+                ‹
+              </button>
+              <h3 className="text-xl font-bold flex-1 text-center">¿Dónde guardar esta canción?</h3>
+              <div style={{ width: '48px' }}></div>
+            </div>
+            
+            <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: 'var(--accent-light)', border: '2px solid var(--accent)' }}>
+              <p className="text-sm font-semibold mb-2">📍 Selecciona el cancionero destino</p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                La canción "{editTitle}" se guardará en el cancionero que selecciones.
+              </p>
+            </div>
+            
+            <div className="space-y-3 mb-4">
+              <label className="text-xs font-bold mb-1.5 block">Cancionero</label>
+              <div className="flex gap-2">
+                <select
+                  value={tempHymnalIdForSave}
+                  onChange={e => setTempHymnalIdForSave(e.target.value)}
+                  className="flex-1 p-3 rounded-xl border text-sm"
+                  style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                >
+                  {[...hymnals, ...state.customHymnals].map(h => (
+                    <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => setImportStep('edit')}
+                className="flex-1 py-3 rounded-xl font-bold"
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              >
+                ‹ Cancelar
+              </button>
+              <button
+                onClick={saveEditedSongWithHymnal}
+                className="flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2"
+                style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+              >
+                <Save size={18} /> Guardar en Cancionero
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // Modo exportación
+  if (exportStep === 'choice') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
+        <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold">Exportar Canciones</h3>
+            <button onClick={onClose} className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            <button
+              onClick={() => { setExportType('single'); setExportStep('single'); }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <FileText size={32} style={{ color: 'var(--accent)' }} />
+                <div>
+                  <div className="font-bold">Archivo Único</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Exportar una sola canción</div>
+                </div>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => { setExportType('batch'); setExportStep('batch'); }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <File size={32} style={{ color: 'var(--accent)' }} />
+                <div>
+                  <div className="font-bold">Exportación en Lote</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Exportar múltiples canciones</div>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (exportStep === 'single' || exportStep === 'batch') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
+        <div className="w-full max-w-2xl rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-bold">
+                {exportStep === 'single' ? 'Seleccionar Canción' : 'Seleccionar Canciones'}
+              </h3>
+              {exportStep === 'batch' && (
+                <p className="text-sm" style={{ color: 'var(--accent)' }}>
+                  {selectedSongs.size} canción(es) seleccionada(s)
+                </p>
+              )}
+            </div>
+            <button onClick={onClose} className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="relative mb-4">
+            <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Buscar canciones..."
+              className="w-full pl-10 pr-4 py-3 rounded-xl border"
+              style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+            />
+          </div>
+          
+          {exportStep === 'batch' && (
+            <button
+              onClick={selectAll}
+              className="mb-3 px-4 py-2 rounded-lg text-sm font-bold"
+              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+            >
+              {selectedSongs.size === filteredSongs.length ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
+            </button>
+          )}
+          
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {filteredSongs.map(song => (
+              <div
+                key={song.id}
+                onClick={() => {
+                  if (exportStep === 'single') {
+                    setSelectedSongs(new Set([song.id]));
+                    setExportStep('format');
+                  } else {
+                    toggleSongSelection(song.id);
+                  }
+                }}
+                className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer hover:scale-[1.01] transition-all"
+                style={{
+                  borderColor: selectedSongs.has(song.id) ? 'var(--accent)' : 'var(--border-color)',
+                  backgroundColor: selectedSongs.has(song.id) ? 'var(--accent-light)' : 'var(--bg-secondary)',
+                }}
+              >
+                {exportStep === 'batch' && (
+                  <div style={{ color: selectedSongs.has(song.id) ? 'var(--accent)' : 'var(--text-muted)' }}>
+                    {selectedSongs.has(song.id) ? <CheckSquare size={20} /> : <Square size={20} />}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="font-semibold text-sm">{song.title}</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {song.code} • {song.artist} • {song.key}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {exportStep === 'batch' && selectedSongs.size > 0 && (
+            <button
+              onClick={() => setExportStep('format')}
+              className="w-full mt-4 py-3 rounded-xl font-bold"
+              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+            >
+              Continuar →
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (exportStep === 'format') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
+        <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold">Seleccionar Formato</h3>
+            <button onClick={onClose} className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600">
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            <button
+              onClick={() => { setExportFormat('text'); handleExport(); }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <FileText size={32} style={{ color: 'var(--accent)' }} />
+                <div>
+                  <div className="font-bold">Texto (.txt)</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Archivo de texto plano</div>
+                </div>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => { setExportFormat('pdf'); handleExport(); }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <File size={32} style={{ color: '#ef4444' }} />
+                <div>
+                  <div className="font-bold">PDF (.pdf)</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Documento PDF</div>
+                </div>
+              </div>
+            </button>
+            
+            <button
+              onClick={() => { setExportFormat('word'); handleExport(); }}
+              className="w-full p-4 rounded-xl border text-left hover:scale-[1.02] transition-all"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <File size={32} style={{ color: '#3b82f6' }} />
+                <div>
+                  <div className="font-bold">Word (.docx)</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Documento de Word</div>
+                </div>
+              </div>
+            </button>
+          </div>
+          
+          <button
+            onClick={() => setExportStep(exportType)}
+            className="w-full mt-4 py-2 rounded-lg text-sm"
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            ← Volver
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return null;

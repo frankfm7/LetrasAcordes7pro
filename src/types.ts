@@ -10,12 +10,18 @@ export interface Song {
   bpm: number;
   language: string;
   categories: string[];
-  sections: any[];
+  sections: SongSection[];
   lyrics: string;
-  lyricsByLanguage?: Record<string, string>;
   notes: string;
+  lyricsByLanguage?: Record<string, string>;
   optionalKey1?: string;
   optionalKey2?: string;
+}
+
+export interface SongSection {
+  type: 'verse' | 'chorus' | 'bridge' | 'intro' | 'outro' | 'pre-chorus';
+  label: string;
+  lines: string[];
 }
 
 export interface Hymnal {
@@ -30,14 +36,53 @@ export interface Hymnal {
   codePrefix?: string;
 }
 
+export interface Setlist {
+  id: string;
+  name: string;
+  songs: SetlistSong[];
+  createdAt: string;
+  updatedAt: string;
+  notes: string;
+}
+
+export interface OrderItem {
+  id: string;
+  type: 'text' | 'song';
+  content: string;
+  songId?: string;
+  notes?: string;
+}
+
+export interface Order {
+  id: string;
+  name: string;
+  eventType: string;
+  items: OrderItem[];
+  createdAt: string;
+  updatedAt: string;
+  notes: string;
+}
+
+export interface SetlistSong {
+  songId: string;
+  transposition: number;
+  notes: string;
+  order: number;
+}
+
+export interface UserPreferences {
+  theme: 'light' | 'dark';
+  fontSize: number;
+  showChords: boolean;
+  capo: number;
+}
+
 export interface AppState {
   favorites: string[];
-  customSongs: Song[];
+  setlists: Setlist[];
+  orders: Order[];
+  preferences: UserPreferences;
+  personalNotes: Record<string, string>;
   customHymnals: Hymnal[];
-  preferences: {
-    theme: 'light' | 'dark';
-    fontSize: number;
-    showChords: boolean;
-    capo: number;
-  };
+  customSongs: Song[];
 }
