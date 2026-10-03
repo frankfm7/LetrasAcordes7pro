@@ -387,7 +387,7 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollSpeed / 20; }, 50);
+      scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollSpeed / 5; }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
     return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
   }, [isAutoScrolling, scrollSpeed]);
