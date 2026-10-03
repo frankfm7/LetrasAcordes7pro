@@ -391,8 +391,8 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      // Fórmula mejorada: velocidad 1 = 0.5px, velocidad 150 = 30px por intervalo
-      const scrollAmount = Math.max(0.5, scrollSpeed * 0.2);
+      // Fórmula reducida al 50%: velocidad 1 = 0.25px, velocidad 150 = 15px por intervalo
+      const scrollAmount = Math.max(0.25, scrollSpeed * 0.1);
       scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollAmount; }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
     return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
@@ -651,14 +651,14 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
               document.addEventListener('touchend', handleTouchEnd);
             }}
             className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
-            style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.85)' : 'rgba(124,58,237,0.85)', color: 'white' }}
+            style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.6)' : 'rgba(124,58,237,0.6)', color: 'white' }}
           >
             {isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
           </button>
           <button
             onClick={() => setShowSpeedModal(true)}
             className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all hover:scale-105"
-            style={{ backgroundColor: 'rgba(124,58,237,0.5)', color: 'white', backdropFilter: 'blur(5px)' }}
+            style={{ backgroundColor: 'rgba(124,58,237,0.3)', color: 'white', backdropFilter: 'blur(5px)' }}
           >
             {scrollSpeed}
           </button>
