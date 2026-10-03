@@ -395,9 +395,9 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      // Fórmula exponencial para que velocidades bajas sean perceptibles
-      // Velocidad 1 = 0.3px, Velocidad 50 = 3px, Velocidad 150 = 15px
-      const scrollAmount = Math.pow(scrollSpeed, 1.3) * 0.05;
+      // Fórmula lineal con mínimo perceptible
+      // Velocidad 1-2 = 2px/seg, Velocidad 50 = 50px/seg, Velocidad 150 = 150px/seg
+      const scrollAmount = Math.max(0.1, scrollSpeed * 0.05);
       scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollAmount; }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
     return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
