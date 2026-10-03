@@ -361,8 +361,15 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [showAddToList, setShowAddToList] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [customKeys, setCustomKeys] = useState<{ key1: string | null; key2: string | null; key3: string | null }>({ key1: null, key2: null, key3: null });
+  const [showKeySelector, setShowKeySelector] = useState(false);
+  const [editingButton, setEditingButton] = useState<1 | 2 | 3 | null>(null);
+  const [selectedNote, setSelectedNote] = useState('C');
+  const [selectedIsMinor, setSelectedIsMinor] = useState(false);
+  const longPressTimerRef = useRef<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
+  const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
   const song = useMemo(() => {
     const customSong = state.customSongs.find(s => s.id === initialSong.id);
@@ -385,6 +392,72 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
     return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
   }, [isAutoScrolling, scrollSpeed]);
 
+  // Funciones para botones de transposición personalizados
+  const handleKeyButtonClick = (buttonIndex: 0 | 1 | 2 | 3, key: string | null) => {
+    if (buttonIndex === 0) {
+      setActiveKey(null);
+      setTransposition(0);
+    } else {
+      setActiveKey(key);
+      if (key) {
+        const baseKey = key.replace(/m$/, '');
+        const baseOriginalKey = song.key.replace(/m$/, '');
+        const originalIndex = allNotes.indexOf(baseOriginalKey);
+        const newIndex = allNotes.indexOf(baseKey);
+        if (originalIndex !== -1 && newIndex !== -1) {
+          setTransposition(newIndex - originalIndex);
+        }
+      }
+    }
+  };
+
+  const handleKeyButtonLongPress = (buttonIndex: 1 | 2 | 3) => {
+    setEditingButton(buttonIndex);
+    setSelectedNote('C');
+    setSelectedIsMinor(false);
+    setShowKeySelector(true);
+  };
+
+  const handleSaveCustomKey = () => {
+    if (editingButton === null) return;
+    const fullNote = selectedIsMinor ? selectedNote + 'm' : selectedNote;
+    const newKeys = { ...customKeys };
+    if (editingButton === 1) newKeys.key1 = fullNote;
+    else if (editingButton === 2) newKeys.key2 = fullNote;
+    else if (editingButton === 3) newKeys.key3 = fullNote;
+    setCustomKeys(newKeys);
+    localStorage.setItem(`song-keys-${song.id}`, JSON.stringify(newKeys));
+    setShowKeySelector(false);
+    setEditingButton(null);
+    showNotification(`Botón ${editingButton} actualizado a ${fullNote}`, 'success');
+  };
+
+  const handleMouseDown = (buttonIndex: 1 | 2 | 3) => {
+    longPressTimerRef.current = window.setTimeout(() => {
+      handleKeyButtonLongPress(buttonIndex);
+      longPressTimerRef.current = null;
+    }, 1000);
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // Cargar claves personalizadas desde localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(`song-keys-${song.id}`);
+    if (saved) {
+      try {
+        setCustomKeys(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error loading custom keys:', e);
+      }
+    }
+  }, [song.id]);
+
   const copyLyrics = () => {
     const cleanLyrics = transposedLyrics.replace(/\/\/[^\n]*\n/g, '').replace(/\n{3,}/g, '\n\n').trim();
     navigator.clipboard.writeText(cleanLyrics); showNotification('Letra copiada', 'success');
@@ -394,6 +467,48 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
     const text = generateSongShareText(song);
     if (navigator.share) navigator.share({ title: song.title, text });
     else { navigator.clipboard.writeText(text); showNotification('Copiado', 'success'); }
+  };
+
+  const sections = useMemo(() => {
+    const lines = transposedLyrics.split('\n');
+    const sectionList: { id: string; label: string; type: string }[] = [];
+    lines.forEach((line: string) => {
+      const trimmed = line.trim();
+      const sectionMatch = trimmed.match(/^(VERSO|CORO|PUENTE|INTRO|FINAL|PRE-CORO|PRE CORO|OUTRO|BRIDGE)\s*(\d*)/i);
+      if (sectionMatch && !trimmed.includes('//')) {
+        const type = sectionMatch[1].toUpperCase();
+        const num = sectionMatch[2] || '';
+        const id = `${type}${num}`.toLowerCase();
+        const label = num ? `${type.charAt(0)}${num}` : type.charAt(0);
+        sectionList.push({ id, label: label.toUpperCase(), type });
+      }
+    });
+    return sectionList;
+  }, [transposedLyrics]);
+
+  const scrollToSection = (sectionId: string) => {
+    if (scrollContainerRef.current) {
+      const element = scrollContainerRef.current.querySelector(`[data-section="${sectionId}"]`);
+      if (element) {
+        const container = scrollContainerRef.current;
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = (element as HTMLElement).getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+        
+        const wasAutoScrolling = isAutoScrolling;
+        if (isAutoScrolling) {
+          setIsAutoScrolling(false);
+        }
+        
+        container.scrollTo({ top: relativeTop - 80, behavior: 'smooth' });
+        
+        if (wasAutoScrolling) {
+          setTimeout(() => {
+            setIsAutoScrolling(true);
+          }, 2000);
+        }
+      }
+    }
   };
 
   const renderLyrics = () => {
@@ -406,9 +521,11 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
       const sectionMatch = trimmed.match(/^(VERSO|CORO|PUENTE|INTRO|FINAL|PRE-CORO|PRE CORO|OUTRO|BRIDGE)\s*(\d*)/i);
       if (sectionMatch && !trimmed.includes('//')) {
         const type = sectionMatch[1].toUpperCase();
+        const num = sectionMatch[2] || '';
+        const sectionId = `${type}${num}`.toLowerCase();
         const sectionColors: Record<string, string> = { 'VERSO': '#7c3aed', 'CORO': '#f59e0b', 'PUENTE': '#059669', 'INTRO': '#6366f1', 'FINAL': '#ef4444', 'PRE-CORO': '#ec4899', 'PRE CORO': '#ec4899', 'OUTRO': '#0891b2', 'BRIDGE': '#059669' };
         const color = sectionColors[type] || 'var(--accent)';
-        elements.push(<div key={lineIndex++} className="mt-8 mb-3"><span className="text-sm font-black uppercase tracking-widest px-3 py-1.5 rounded-lg inline-block" style={{ color, backgroundColor: color + '20' }}>{trimmed}</span></div>);
+        elements.push(<div key={lineIndex++} data-section={sectionId} className="mt-8 mb-3"><span className="text-sm font-black uppercase tracking-widest px-3 py-1.5 rounded-lg inline-block" style={{ color, backgroundColor: color + '20' }}>{trimmed}</span></div>);
         continue;
       }
       if (trimmed.startsWith('//')) {
@@ -453,9 +570,10 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
 
       <div className="flex-shrink-0 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <button onClick={() => { setActiveKey(null); setTransposition(0); }} className={`px-2 py-1 rounded-md text-xs font-bold ${activeKey === null ? 'ring-2 ring-offset-1 ring-purple-500' : ''}`} style={{ backgroundColor: activeKey === null ? 'var(--accent)' : 'var(--bg-tertiary)', color: activeKey === null ? 'white' : 'var(--text-secondary)' }} title="Tono original">{song.key}</button>
-          {song.optionalKey1 && <button onClick={() => { setActiveKey(song.optionalKey1); const baseKey = song.optionalKey1!.replace(/m$/, ''); const baseOriginalKey = song.key.replace(/m$/, ''); const originalIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(baseOriginalKey); const newIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(baseKey); if (originalIndex !== -1 && newIndex !== -1) setTransposition(newIndex - originalIndex); }} className={`px-2 py-1 rounded-md text-xs font-bold ${activeKey === song.optionalKey1 ? 'ring-2 ring-offset-1 ring-purple-500' : ''}`} style={{ backgroundColor: activeKey === song.optionalKey1 ? 'var(--accent)' : 'var(--bg-tertiary)', color: activeKey === song.optionalKey1 ? 'white' : 'var(--text-secondary)' }}>{song.optionalKey1}</button>}
-          {song.optionalKey2 && <button onClick={() => { setActiveKey(song.optionalKey2); const baseKey = song.optionalKey2!.replace(/m$/, ''); const baseOriginalKey = song.key.replace(/m$/, ''); const originalIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(baseOriginalKey); const newIndex = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(baseKey); if (originalIndex !== -1 && newIndex !== -1) setTransposition(newIndex - originalIndex); }} className={`px-2 py-1 rounded-md text-xs font-bold ${activeKey === song.optionalKey2 ? 'ring-2 ring-offset-1 ring-purple-500' : ''}`} style={{ backgroundColor: activeKey === song.optionalKey2 ? 'var(--accent)' : 'var(--bg-tertiary)', color: activeKey === song.optionalKey2 ? 'white' : 'var(--text-secondary)' }}>{song.optionalKey2}</button>}
+          <button onClick={() => handleKeyButtonClick(0, null)} className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${activeKey === null ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`} style={{ backgroundColor: activeKey === null ? 'var(--accent)' : 'var(--bg-tertiary)', color: activeKey === null ? 'white' : 'var(--text-secondary)', minWidth: '36px' }} title="Tono original">{song.key}</button>
+          <button onClick={() => handleKeyButtonClick(1, customKeys.key1)} onMouseDown={() => handleMouseDown(1)} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${activeKey === customKeys.key1 ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`} style={{ backgroundColor: activeKey === customKeys.key1 ? 'var(--accent)' : 'var(--bg-tertiary)', color: activeKey === customKeys.key1 ? 'white' : 'var(--text-secondary)', minWidth: '36px' }} title={customKeys.key1 ? `${customKeys.key1} (clic largo para editar)` : 'Sin tono (clic largo para editar)'}>{customKeys.key1 || '+'}</button>
+          <button onClick={() => handleKeyButtonClick(2, customKeys.key2)} onMouseDown={() => handleMouseDown(2)} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${activeKey === customKeys.key2 ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`} style={{ backgroundColor: activeKey === customKeys.key2 ? 'var(--accent)' : 'var(--bg-tertiary)', color: activeKey === customKeys.key2 ? 'white' : 'var(--text-secondary)', minWidth: '36px' }} title={customKeys.key2 ? `${customKeys.key2} (clic largo para editar)` : 'Sin tono (clic largo para editar)'}>{customKeys.key2 || '+'}</button>
+          <button onClick={() => handleKeyButtonClick(3, customKeys.key3)} onMouseDown={() => handleMouseDown(3)} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${activeKey === customKeys.key3 ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`} style={{ backgroundColor: activeKey === customKeys.key3 ? 'var(--accent)' : 'var(--bg-tertiary)', color: activeKey === customKeys.key3 ? 'white' : 'var(--text-secondary)', minWidth: '36px' }} title={customKeys.key3 ? `${customKeys.key3} (clic largo para editar)` : 'Sin tono (clic largo para editar)'}>{customKeys.key3 || '+'}</button>
         </div>
       </div>
 
@@ -476,13 +594,24 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
       )}
 
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto rounded-2xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
+        {sections.length > 0 && (
+          <div className="sticky top-0 z-20 py-2 px-3 border-b shadow-sm" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+            <div className="flex gap-1.5 overflow-x-auto">
+              {sections.map((section, idx) => {
+                const sectionColors: Record<string, string> = { 'VERSO': '#7c3aed', 'CORO': '#f59e0b', 'PUENTE': '#059669', 'INTRO': '#6366f1', 'FINAL': '#ef4444', 'PRE-CORO': '#ec4899', 'PRE CORO': '#ec4899', 'OUTRO': '#0891b2', 'BRIDGE': '#059669' };
+                const color = sectionColors[section.type] || 'var(--accent)';
+                return (<button key={idx} onClick={() => scrollToSection(section.id)} className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 active:scale-95 flex-shrink-0" style={{ backgroundColor: color + '20', color }}>{section.label}</button>);
+              })}
+            </div>
+          </div>
+        )}
         <div className="p-5 md:p-8">{renderLyrics()}</div>
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
         {isAutoScrolling && (
           <div className="rounded-xl p-2 flex flex-col items-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)', backdropFilter: 'blur(5px)' }}>
-            <input type="range" min="10" max="200" step="10" value={scrollSpeed} onChange={e => setScrollSpeed(Number(e.target.value))} className="accent-purple-400" style={{ writingMode: 'vertical-lr' as any, direction: 'rtl', height: '80px', width: '24px' }} />
+            <input type="range" min="1" max="150" step="1" value={scrollSpeed} onChange={e => setScrollSpeed(Number(e.target.value))} className="accent-purple-400" style={{ writingMode: 'vertical-lr' as any, direction: 'rtl', height: '80px', width: '24px' }} />
             <div className="text-[10px] font-bold mt-1 text-white/90">{scrollSpeed}</div>
           </div>
         )}
@@ -502,6 +631,44 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de selección de notas para botones personalizados */}
+      {showKeySelector && editingButton && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowKeySelector(false)}>
+          <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-4">Editar Botón {editingButton}</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Selecciona la nota</label>
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  {allNotes.map(note => (
+                    <button key={note} onClick={() => setSelectedNote(note)} className={`py-3 rounded-lg text-base font-bold transition-all ${selectedNote === note ? 'scale-110' : ''}`} style={{ backgroundColor: selectedNote === note ? 'var(--accent)' : 'var(--bg-tertiary)', color: selectedNote === note ? 'white' : 'var(--text-primary)', border: selectedNote === note ? '2px solid var(--accent)' : '2px solid transparent' }}>{note}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Tipo de acorde</label>
+                <div className="flex gap-2">
+                  <button onClick={() => setSelectedIsMinor(false)} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${!selectedIsMinor ? 'scale-105' : ''}`} style={{ backgroundColor: !selectedIsMinor ? 'var(--accent)' : 'var(--bg-tertiary)', color: !selectedIsMinor ? 'white' : 'var(--text-primary)' }}>Mayor (M)</button>
+                  <button onClick={() => setSelectedIsMinor(true)} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${selectedIsMinor ? 'scale-105' : ''}`} style={{ backgroundColor: selectedIsMinor ? 'var(--accent)' : 'var(--bg-tertiary)', color: selectedIsMinor ? 'white' : 'var(--text-primary)' }}>Menor (m)</button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl text-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Vista previa:</p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{selectedNote}{selectedIsMinor ? 'm' : ''}</p>
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => setShowKeySelector(false)} className="flex-1 py-3 rounded-lg text-sm font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
+                <button onClick={handleSaveCustomKey} className="flex-1 py-3 rounded-lg text-sm font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Guardar</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
