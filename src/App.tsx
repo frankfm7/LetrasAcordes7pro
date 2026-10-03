@@ -370,6 +370,10 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   const [selectedNote, setSelectedNote] = useState('C');
   const [selectedIsMinor, setSelectedIsMinor] = useState(false);
   const [showSpeedModal, setShowSpeedModal] = useState(false);
+  const [buttonOpacity, setButtonOpacity] = useState(() => {
+    const saved = localStorage.getItem(`song-button-opacity-${initialSong.id}`);
+    return saved ? parseFloat(saved) : 0.6;
+  });
   const longPressTimerRef = useRef<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
@@ -391,8 +395,9 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      // Fórmula reducida al 50%: velocidad 1 = 0.25px, velocidad 150 = 15px por intervalo
-      const scrollAmount = Math.max(0.25, scrollSpeed * 0.1);
+      // Fórmula exponencial para que velocidades bajas sean perceptibles
+      // Velocidad 1 = 0.3px, Velocidad 50 = 3px, Velocidad 150 = 15px
+      const scrollAmount = Math.pow(scrollSpeed, 1.3) * 0.05;
       scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollAmount; }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
     return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
@@ -468,6 +473,12 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   const handleScrollSpeedChange = (newSpeed: number) => {
     setScrollSpeed(newSpeed);
     localStorage.setItem(`song-scroll-speed-${song.id}`, newSpeed.toString());
+  };
+
+  // Guardar opacidad del botón cuando cambia
+  const handleOpacityChange = (newOpacity: number) => {
+    setButtonOpacity(newOpacity);
+    localStorage.setItem(`song-button-opacity-${song.id}`, newOpacity.toString());
   };
 
   const copyLyrics = () => {
@@ -620,13 +631,7 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
         <div className="p-5 md:p-8">{renderLyrics()}</div>
       </div>
 
-      <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
-        {isAutoScrolling && (
-          <div className="rounded-xl p-2 flex flex-col items-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)', backdropFilter: 'blur(5px)' }}>
-            <input type="range" min="1" max="150" step="1" value={scrollSpeed} onChange={e => handleScrollSpeedChange(Number(e.target.value))} className="accent-purple-400" style={{ writingMode: 'vertical-lr' as any, direction: 'rtl', height: '80px', width: '24px' }} />
-            <div className="text-[10px] font-bold mt-1 text-white/90">{scrollSpeed}</div>
-          </div>
-        )}
+      <div className="fixed bottom-24 right-4 z-30">
         <div className="relative">
           <button 
             onClick={() => setIsAutoScrolling(!isAutoScrolling)} 
@@ -651,7 +656,7 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
               document.addEventListener('touchend', handleTouchEnd);
             }}
             className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
-            style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.6)' : 'rgba(124,58,237,0.6)', color: 'white' }}
+            style={{ backgroundColor: isAutoScrolling ? `rgba(239,68,68,${buttonOpacity})` : `rgba(124,58,237,${buttonOpacity})`, color: 'white' }}
           >
             {isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
           </button>
@@ -729,7 +734,18 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-semibold mb-2 block">Velocidad de desplazamiento</label>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="150" 
+                    value={scrollSpeed} 
+                    onChange={e => handleScrollSpeedChange(Math.max(1, Math.min(150, Number(e.target.value))))} 
+                    className="flex-1 p-2 rounded-lg border text-center font-bold text-lg"
+                    style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <div className="flex items-center gap-4 mt-3">
                   <input 
                     type="range" 
                     min="1" 
@@ -739,19 +755,38 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
                     onChange={e => handleScrollSpeedChange(Number(e.target.value))} 
                     className="flex-1 accent-purple-600" 
                   />
-                  <div className="text-2xl font-bold min-w-[60px] text-center" style={{ color: 'var(--accent)' }}>
-                    {scrollSpeed}
+                </div>
+                <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  <span>1 (Muy lento)</span>
+                  <span>150 (Muy rápido)</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Transparencia del botón</label>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="range" 
+                    min="0.1" 
+                    max="1" 
+                    step="0.05" 
+                    value={buttonOpacity} 
+                    onChange={e => handleOpacityChange(Number(e.target.value))} 
+                    className="flex-1 accent-purple-600" 
+                  />
+                  <div className="text-lg font-bold min-w-[60px] text-center" style={{ color: 'var(--accent)' }}>
+                    {Math.round(buttonOpacity * 100)}%
                   </div>
                 </div>
                 <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  <span>Lento</span>
-                  <span>Rápido</span>
+                  <span>Más transparente</span>
+                  <span>Más opaco</span>
                 </div>
               </div>
 
               <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                  💡 La velocidad se guardará automáticamente para esta canción
+                  💡 La velocidad y transparencia se guardarán automáticamente para esta canción
                 </p>
               </div>
 
