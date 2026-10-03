@@ -369,6 +369,7 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   const [editingButton, setEditingButton] = useState<1 | 2 | 3 | null>(null);
   const [selectedNote, setSelectedNote] = useState('C');
   const [selectedIsMinor, setSelectedIsMinor] = useState(false);
+  const [showSpeedModal, setShowSpeedModal] = useState(false);
   const longPressTimerRef = useRef<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
@@ -390,7 +391,9 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollSpeed / 5; }, 50);
+      // Fórmula mejorada: velocidad 1 = 0.5px, velocidad 150 = 30px por intervalo
+      const scrollAmount = Math.max(0.5, scrollSpeed * 0.2);
+      scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollAmount; }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
     return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
   }, [isAutoScrolling, scrollSpeed]);
@@ -621,20 +624,44 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
         {isAutoScrolling && (
           <div className="rounded-xl p-2 flex flex-col items-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)', backdropFilter: 'blur(5px)' }}>
             <input type="range" min="1" max="150" step="1" value={scrollSpeed} onChange={e => handleScrollSpeedChange(Number(e.target.value))} className="accent-purple-400" style={{ writingMode: 'vertical-lr' as any, direction: 'rtl', height: '80px', width: '24px' }} />
-            <div className="text-[10px] font-bold mt-1 text-white/90">{scrollSpeed}%</div>
+            <div className="text-[10px] font-bold mt-1 text-white/90">{scrollSpeed}</div>
           </div>
         )}
-        <div className="relative flex items-center gap-2">
-          <button onClick={() => handleScrollSpeedChange(Math.max(1, scrollSpeed - 5))} className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95" style={{ backgroundColor: 'rgba(124,58,237,0.7)', color: 'white' }} title="Disminuir velocidad">
-            <ChevronLeft size={20} />
+        <div className="relative">
+          <button 
+            onClick={() => setIsAutoScrolling(!isAutoScrolling)} 
+            onMouseDown={() => {
+              const timer = setTimeout(() => {
+                setShowSpeedModal(true);
+              }, 800);
+              const handleMouseUp = () => {
+                clearTimeout(timer);
+                document.removeEventListener('mouseup', handleMouseUp);
+              };
+              document.addEventListener('mouseup', handleMouseUp);
+            }}
+            onTouchStart={() => {
+              const timer = setTimeout(() => {
+                setShowSpeedModal(true);
+              }, 800);
+              const handleTouchEnd = () => {
+                clearTimeout(timer);
+                document.removeEventListener('touchend', handleTouchEnd);
+              };
+              document.addEventListener('touchend', handleTouchEnd);
+            }}
+            className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
+            style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.85)' : 'rgba(124,58,237,0.85)', color: 'white' }}
+          >
+            {isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
           </button>
-          <button onClick={() => setIsAutoScrolling(!isAutoScrolling)} className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.85)' : 'rgba(124,58,237,0.85)', color: 'white' }}>{isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}</button>
-          <button onClick={() => handleScrollSpeedChange(Math.min(150, scrollSpeed + 5))} className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95" style={{ backgroundColor: 'rgba(124,58,237,0.7)', color: 'white' }} title="Aumentar velocidad">
-            <ChevronRight size={20} />
+          <button
+            onClick={() => setShowSpeedModal(true)}
+            className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all hover:scale-105"
+            style={{ backgroundColor: 'rgba(124,58,237,0.5)', color: 'white', backdropFilter: 'blur(5px)' }}
+          >
+            {scrollSpeed}
           </button>
-          <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap" style={{ backgroundColor: 'rgba(124,58,237,0.7)', color: 'white', backdropFilter: 'blur(5px)' }}>
-            {scrollSpeed}%
-          </div>
         </div>
       </div>
 
@@ -687,6 +714,51 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
               <div className="flex gap-2">
                 <button onClick={() => setShowKeySelector(false)} className="flex-1 py-3 rounded-lg text-sm font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
                 <button onClick={handleSaveCustomKey} className="flex-1 py-3 rounded-lg text-sm font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Guardar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de configuración de velocidad */}
+      {showSpeedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowSpeedModal(false)}>
+          <div className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-4">Configurar Velocidad</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Velocidad de desplazamiento</label>
+                <div className="flex items-center gap-4">
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="150" 
+                    step="1" 
+                    value={scrollSpeed} 
+                    onChange={e => handleScrollSpeedChange(Number(e.target.value))} 
+                    className="flex-1 accent-purple-600" 
+                  />
+                  <div className="text-2xl font-bold min-w-[60px] text-center" style={{ color: 'var(--accent)' }}>
+                    {scrollSpeed}
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  <span>Lento</span>
+                  <span>Rápido</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  💡 La velocidad se guardará automáticamente para esta canción
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => setShowSpeedModal(false)} className="flex-1 py-3 rounded-lg text-sm font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
+                  Cerrar
+                </button>
               </div>
             </div>
           </div>
