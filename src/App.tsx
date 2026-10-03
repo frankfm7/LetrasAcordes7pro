@@ -356,7 +356,10 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
   const [transposition, setTransposition] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(50);
+  const [scrollSpeed, setScrollSpeed] = useState(() => {
+    const saved = localStorage.getItem(`song-scroll-speed-${initialSong.id}`);
+    return saved ? parseInt(saved) : 50;
+  });
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialSong.language.split('/')[0]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [showAddToList, setShowAddToList] = useState(false);
@@ -457,6 +460,12 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
       }
     }
   }, [song.id]);
+
+  // Guardar velocidad de scroll cuando cambia
+  const handleScrollSpeedChange = (newSpeed: number) => {
+    setScrollSpeed(newSpeed);
+    localStorage.setItem(`song-scroll-speed-${song.id}`, newSpeed.toString());
+  };
 
   const copyLyrics = () => {
     const cleanLyrics = transposedLyrics.replace(/\/\/[^\n]*\n/g, '').replace(/\n{3,}/g, '\n\n').trim();
@@ -611,11 +620,22 @@ function SongView({ song: initialSong, onBack, showNotification, onEdit }: any) 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
         {isAutoScrolling && (
           <div className="rounded-xl p-2 flex flex-col items-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)', backdropFilter: 'blur(5px)' }}>
-            <input type="range" min="1" max="150" step="1" value={scrollSpeed} onChange={e => setScrollSpeed(Number(e.target.value))} className="accent-purple-400" style={{ writingMode: 'vertical-lr' as any, direction: 'rtl', height: '80px', width: '24px' }} />
-            <div className="text-[10px] font-bold mt-1 text-white/90">{scrollSpeed}</div>
+            <input type="range" min="1" max="150" step="1" value={scrollSpeed} onChange={e => handleScrollSpeedChange(Number(e.target.value))} className="accent-purple-400" style={{ writingMode: 'vertical-lr' as any, direction: 'rtl', height: '80px', width: '24px' }} />
+            <div className="text-[10px] font-bold mt-1 text-white/90">{scrollSpeed}%</div>
           </div>
         )}
-        <button onClick={() => setIsAutoScrolling(!isAutoScrolling)} className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.85)' : 'rgba(124,58,237,0.85)', color: 'white' }}>{isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}</button>
+        <div className="relative flex items-center gap-2">
+          <button onClick={() => handleScrollSpeedChange(Math.max(1, scrollSpeed - 5))} className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95" style={{ backgroundColor: 'rgba(124,58,237,0.7)', color: 'white' }} title="Disminuir velocidad">
+            <ChevronLeft size={20} />
+          </button>
+          <button onClick={() => setIsAutoScrolling(!isAutoScrolling)} className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.85)' : 'rgba(124,58,237,0.85)', color: 'white' }}>{isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}</button>
+          <button onClick={() => handleScrollSpeedChange(Math.min(150, scrollSpeed + 5))} className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95" style={{ backgroundColor: 'rgba(124,58,237,0.7)', color: 'white' }} title="Aumentar velocidad">
+            <ChevronRight size={20} />
+          </button>
+          <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap" style={{ backgroundColor: 'rgba(124,58,237,0.7)', color: 'white', backdropFilter: 'blur(5px)' }}>
+            {scrollSpeed}%
+          </div>
+        </div>
       </div>
 
       {showAddToList && (
