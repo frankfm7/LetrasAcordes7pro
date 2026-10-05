@@ -1,31 +1,43 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AppProvider, useApp } from '../context/AppContext';
+import { NotificationProvider, useNotification } from './NotificationProvider';
 import { Song, Hymnal, Order, OrderItem } from '../types';
-import { songs as allSongs, hymnals } from '../data/songs';
+import { songs as allSongs, hymnals, generateSongCode, getNextSongNumber } from '../data/songs';
 import { transposeLyrics } from '../utils/chords';
 import { generateSongShareText } from '../utils/shareUtils';
-import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image } from 'lucide-react';
+import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save } from 'lucide-react';
 import SplashScreen from './SplashScreen';
 import Metronome from './Metronome';
 import Tuner from './Tuner';
+import SongEditor from './SongEditor';
+import EditHymnalModal from './EditHymnalModal';
 
 export default function App() {
-  return <AppProvider><AppContent /></AppProvider>;
+  return (
+    <NotificationProvider>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </NotificationProvider>
+  );
 }
 
 function AppContent() {
-  const { state, setTheme } = useApp();
+  const { state, setTheme, addCustomHymnal, updateCustomHymnal, removeCustomHymnal } = useApp();
+  const { showNotification } = useNotification();
   const [showSplash, setShowSplash] = useState(true);
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [selectedHymnal, setSelectedHymnal] = useState<Hymnal | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notification, setNotification] = useState<{ message: string; type: string } | null>(null);
-
-  const showNotification = useCallback((message: string, type: string = 'success') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 2000);
-  }, []);
+  const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [showEditHymnalModal, setShowEditHymnalModal] = useState(false);
+  const [editingHymnal, setEditingHymnal] = useState<Hymnal | null>(null);
+  const [showAddHymnalModal, setShowAddHymnalModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [newHymnalName, setNewHymnalName] = useState('');
+  const [newHymnalDesc, setNewHymnalDesc] = useState('');
 
   useEffect(() => {
     document.documentElement.className = state.preferences.theme;
@@ -44,56 +56,162 @@ function AppContent() {
     setSelectedSong(null);
     setSelectedHymnal(null);
     setSidebarOpen(false);
+    setEditingSong(null);
   }, []);
+
+  const handleExport = useCallback(() => {
+    try {
+      const data = JSON.stringify(state, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cancionero7pro-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showNotification('Respaldo exportado', 'success');
+    } catch {
+      showNotification('Error al exportar', 'error');
+    }
+  }, [state, showNotification]);
+
+  const handleImport = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string);
+          if (data.favorites && data.setlists) {
+            localStorage.setItem('cancionero-ruah-state', JSON.stringify(data));
+            showNotification('Respaldo restaurado', 'success');
+            window.location.reload();
+          } else showNotification('Archivo inválido', 'error');
+        } catch {
+          showNotification('Error al importar', 'error');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, [showNotification]);
+
+  const handleCreateHymnal = () => {
+    if (!newHymnalName.trim()) return;
+    const newHymnal: Hymnal = {
+      id: `custom-${Date.now()}`,
+      name: newHymnalName.trim(),
+      description: newHymnalDesc.trim(),
+      language: 'Castellano',
+      icon: '🎵',
+      color: '#a855f7',
+      isCustom: true,
+      codePrefix: newHymnalName.trim().charAt(0).toUpperCase(),
+    };
+    addCustomHymnal(newHymnal);
+    showNotification('Cancionero creado', 'success');
+    setNewHymnalName('');
+    setNewHymnalDesc('');
+    setShowAddHymnalModal(false);
+  };
 
   if (showSplash) return <SplashScreen onComplete={() => setShowSplash(false)} />;
 
+  if (editingSong) {
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+        <SongEditor song={editingSong} onBack={() => setEditingSong(null)} />
+      </Layout>
+    );
+  }
+
   if (selectedSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
-        <SongView song={selectedSong} onBack={handleBack} showNotification={showNotification} />
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+        <SongView song={selectedSong} onBack={handleBack} onEdit={() => setEditingSong(selectedSong)} showNotification={showNotification} />
       </Layout>
     );
   }
 
   if (selectedHymnal) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
-        <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} showNotification={showNotification} />
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+        <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} showNotification={showNotification} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} />
       </Layout>
     );
   }
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'home': return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} />;
+      case 'home': return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} onAddHymnal={() => setShowAddHymnalModal(true)} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} />;
       case 'search': return <SearchPage onSelectSong={handleSelectSong} />;
       case 'favorites': return <FavoritesPage onSelectSong={handleSelectSong} />;
       case 'setlists': return <SetlistsPage onSelectSong={handleSelectSong} showNotification={showNotification} />;
+      case 'orders': return <OrdersPage onSelectSong={handleSelectSong} showNotification={showNotification} />;
       case 'tools': return <ToolsPage />;
-      default: return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} />;
+      default: return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} onAddHymnal={() => setShowAddHymnalModal(true)} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} />;
     }
   };
 
   return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
+    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
       {renderPage()}
-      {notification && (
-        <div className="fixed top-20 right-4 z-[100] p-4 rounded-xl shadow-lg animate-fade-in max-w-sm" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{notification.message}</span>
+      {showEditHymnalModal && editingHymnal && (
+        <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
+      )}
+      {showAddHymnalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddHymnalModal(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Nuevo Cancionero</h3>
+            <input type="text" placeholder="Nombre" value={newHymnalName} onChange={e => setNewHymnalName(e.target.value)} autoFocus className="w-full p-3 text-sm rounded-xl border bg-transparent" style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+            <input type="text" placeholder="Descripción (opcional)" value={newHymnalDesc} onChange={e => setNewHymnalDesc(e.target.value)} className="w-full p-3 text-sm rounded-xl border bg-transparent" style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+            <div className="flex gap-2">
+              <button onClick={() => setShowAddHymnalModal(false)} className="flex-1 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
+              <button onClick={handleCreateHymnal} disabled={!newHymnalName.trim()} className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Crear</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowExportModal(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Exportar Respaldo</h3>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Se exportarán todas tus canciones, favoritos y listas.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowExportModal(false)} className="flex-1 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
+              <button onClick={() => { handleExport(); setShowExportModal(false); }} className="flex-1 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Exportar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowImportModal(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Importar Respaldo</h3>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>⚠️ Esto reemplazará todos tus datos actuales.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowImportModal(false)} className="flex-1 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
+              <button onClick={() => { handleImport(); setShowImportModal(false); }} className="flex-1 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Importar</button>
+            </div>
+          </div>
         </div>
       )}
     </Layout>
   );
 }
 
-function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen }: any) {
+function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport }: any) {
   const { state, setTheme } = useApp();
   const menuItems = [
     { id: 'home', label: 'Inicio', icon: Home },
     { id: 'search', label: 'Buscar', icon: Search },
     { id: 'favorites', label: 'Favoritos', icon: Star },
     { id: 'setlists', label: 'Listas', icon: ListMusic },
+    { id: 'orders', label: 'Órdenes', icon: Music },
     { id: 'tools', label: 'Tools', icon: Settings },
   ];
 
@@ -123,6 +241,15 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
                 <item.icon size={20} /><span className="font-medium text-sm">{item.label}</span>
               </button>
             ))}
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-3" style={{ color: 'var(--text-muted)' }}>Datos</p>
+              <button onClick={() => { onExport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ color: 'var(--text-primary)' }}>
+                <Download size={20} /><span className="font-medium text-sm">Exportar Respaldo</span>
+              </button>
+              <button onClick={() => { onImport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ color: 'var(--text-primary)' }}>
+                <Upload size={20} /><span className="font-medium text-sm">Importar Respaldo</span>
+              </button>
+            </div>
           </nav>
           <div className="p-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
             <button onClick={() => setTheme(state.preferences.theme === 'dark' ? 'light' : 'dark')} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
@@ -149,9 +276,9 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
       <main className="max-w-6xl mx-auto px-4 py-6 h-[calc(100vh-4rem-4rem)] overflow-y-auto">{children}</main>
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t backdrop-blur-xl" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-primary) 90%, transparent)', borderColor: 'var(--border-color)' }}>
         <div className="max-w-6xl mx-auto flex">
-          {[{ id: 'home', label: 'Inicio', icon: Home }, { id: 'search', label: 'Buscar', icon: Search }, { id: 'favorites', label: 'Favoritos', icon: Heart }, { id: 'setlists', label: 'Listas', icon: ListMusic }, { id: 'tools', label: 'Tools', icon: Settings }].map(item => {
+          {[{ id: 'home', label: 'Inicio', icon: Home }, { id: 'search', label: 'Buscar', icon: Search }, { id: 'favorites', label: 'Favoritos', icon: Heart }, { id: 'setlists', label: 'Listas', icon: ListMusic }, { id: 'orders', label: 'Órdenes', icon: Music }, { id: 'tools', label: 'Tools', icon: Settings }].map(item => {
             const isActive = currentPage === item.id;
-            return (<button key={item.id} onClick={() => onNavigate(item.id)} className={`flex-1 flex flex-col items-center py-3 px-1 transition-all ${isActive ? 'scale-105' : 'opacity-60'}`} style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}><item.icon size={20} strokeWidth={isActive ? 2.5 : 1.5} /><span className="text-[10px] font-semibold mt-1">{item.label}</span>{isActive && <div className="absolute top-0 w-8 h-0.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />}</button>);
+            return (<button key={item.id} onClick={() => onNavigate(item.id)} className={`flex-1 flex flex-col items-center py-3 px-1 transition-all ${isActive ? 'scale-105' : 'opacity-60'}`} style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}><item.icon size={18} strokeWidth={isActive ? 2.5 : 1.5} /><span className="text-[9px] font-semibold mt-1">{item.label}</span>{isActive && <div className="absolute top-0 w-8 h-0.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />}</button>);
           })}
         </div>
       </nav>
@@ -159,7 +286,7 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
   );
 }
 
-function HomePage({ onSelectSong, onSelectHymnal, onSearch }: any) {
+function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal, onEditHymnal }: any) {
   const { state, toggleFavorite, isFavorite } = useApp();
   const allAvailableSongs = useMemo(() => [...allSongs, ...state.customSongs], [state.customSongs]);
   const allHymnals = useMemo(() => [...hymnals, ...state.customHymnals], [state.customHymnals]);
@@ -170,15 +297,21 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch }: any) {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold flex items-center gap-2"><span>📚</span> Cancioneros</h2>
+          <button onClick={onAddHymnal} className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={14} /> Nuevo</button>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
           {allHymnals.map((hymnal) => {
             const hymnalSongs = allAvailableSongs.filter(s => s.hymnalId === hymnal.id);
             return (
-              <button key={hymnal.id} onClick={() => onSelectHymnal(hymnal)} className="rounded-xl sm:rounded-2xl relative overflow-hidden p-2 sm:p-4 flex flex-col justify-between text-left transition-all hover:scale-[1.03] active:scale-[0.97]" style={{ aspectRatio: '3/4', background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 4px 12px ${hymnal.color}44` }}>
-                <div><div className="text-3xl sm:text-5xl mb-1 sm:mb-3">{hymnal.icon}</div><div className="text-white font-bold text-xs sm:text-lg leading-tight mb-1 sm:mb-2" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
-                <div><div className="text-white/90 text-xs sm:text-sm font-semibold" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/70 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
-              </button>
+              <div key={hymnal.id} className="relative group">
+                <button onClick={() => onSelectHymnal(hymnal)} className="rounded-xl sm:rounded-2xl relative overflow-hidden p-2 sm:p-4 flex flex-col justify-between text-left transition-all hover:scale-[1.03] active:scale-[0.97] w-full" style={{ aspectRatio: '3/4', background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 4px 12px ${hymnal.color}44` }}>
+                  <div><div className="text-3xl sm:text-5xl mb-1 sm:mb-3">{hymnal.icon}</div><div className="text-white font-bold text-xs sm:text-lg leading-tight mb-1 sm:mb-2" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
+                  <div><div className="text-white/90 text-xs sm:text-sm font-semibold" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/70 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); onEditHymnal(hymnal); }} className="absolute top-1 right-1 p-1.5 rounded-lg bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Edit3 size={12} />
+                </button>
+              </div>
             );
           })}
         </div>
@@ -205,10 +338,12 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch }: any) {
   );
 }
 
-function SongView({ song: initialSong, onBack, showNotification }: any) {
-  const { state, toggleFavorite, isFavorite, setFontSize, setShowChords, setCapo } = useApp();
+function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) {
+  const { state, toggleFavorite, isFavorite, setFontSize, setShowChords, setCapo, addSongToSetlist } = useApp();
   const [transposition, setTransposition] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
+  const [showAddToList, setShowAddToList] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(50);
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialSong.language.split('/')[0]);
@@ -317,12 +452,16 @@ function SongView({ song: initialSong, onBack, showNotification }: any) {
           <button onClick={() => { const languages = Object.keys(song.lyricsByLanguage!); const idx = languages.indexOf(currentLanguage); setCurrentLanguage(languages[(idx + 1) % languages.length]); }} className="px-3 py-1.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>{currentLanguage}</button>
         )}
         <button onClick={() => setShowConfig(!showConfig)} className="p-2 rounded-xl" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={18} /></button>
-      </div>
-
-      <div className="flex-shrink-0 mb-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button onClick={() => setTransposition(0)} className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${transposition === 0 ? 'ring-2 ring-offset-1 ring-purple-500 scale-105' : ''}`} style={{ backgroundColor: transposition === 0 ? 'var(--accent)' : 'var(--bg-tertiary)', color: transposition === 0 ? 'white' : 'var(--text-secondary)', minWidth: '36px' }} title="Tono original">{song.key}</button>
-          <button onClick={() => setShowConfig(!showConfig)} className="px-2 py-1 rounded-md text-xs font-bold transition-all hover:scale-105" style={{ backgroundColor: 'var(--gold)', color: 'white', minWidth: '36px' }} title="Configuración">⚙️</button>
+        <div className="relative" data-menu>
+          <button onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }} className="p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={18} /></button>
+          {showActionsMenu && (
+            <div className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+              <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
+              <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
+              <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
+              <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -338,7 +477,7 @@ function SongView({ song: initialSong, onBack, showNotification }: any) {
           </div>
           <div><span className="text-sm font-semibold mb-2 block">Tamaño de Letra</span><div className="flex items-center gap-3"><span className="text-xs">A</span><input type="range" min="14" max="32" value={preferences.fontSize} onChange={e => setFontSize(Number(e.target.value))} className="flex-1 accent-purple-600" /><span className="text-xl font-bold">A</span><span className="text-xs w-10 text-right">{preferences.fontSize}px</span></div></div>
           <div className="flex items-center justify-between"><span className="text-sm font-semibold">Mostrar Acordes</span><button onClick={() => setShowChords(!preferences.showChords)} className="w-12 h-7 rounded-full transition-all relative" style={{ backgroundColor: preferences.showChords ? 'var(--accent)' : 'var(--bg-tertiary)' }}><div className="w-5 h-5 rounded-full bg-white absolute top-1 transition-all" style={{ left: preferences.showChords ? '26px' : '4px' }} /></button></div>
-          <div><span className="text-sm font-semibold mb-2 block">Capo de Guitarra</span><div className="flex items-center gap-3"><span className="text-xs">0</span><input type="range" min="0" max="12" value={preferences.capo} onChange={e => setCapo(Number(e.target.value))} className="flex-1 accent-purple-600" /><span className="text-xs w-10 text-right">{preferences.capo}</span></div></div>
+          <div><span className="text-sm font-semibold mb-2 block">Capo de Guitarra</span><div className="flex items-center gap-2"><button onClick={() => setCapo(Math.max(0, preferences.capo - 1))} className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>−</button><div className="flex-1 text-center"><span className="text-2xl font-bold">{preferences.capo > 0 ? `${preferences.capo}°` : '—'}</span><span className="text-xs block" style={{ color: 'var(--text-muted)' }}>traste</span></div><button onClick={() => setCapo(Math.min(12, preferences.capo + 1))} className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>+</button></div></div>
         </div>
       )}
 
@@ -366,15 +505,69 @@ function SongView({ song: initialSong, onBack, showNotification }: any) {
         )}
         <button onClick={() => setIsAutoScrolling(!isAutoScrolling)} className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.85)' : 'rgba(124,58,237,0.85)', color: 'white' }}>{isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}</button>
       </div>
+
+      {showAddToList && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddToList(false)}>
+          <div className="w-full max-w-md rounded-2xl p-5" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-3">Agregar a Lista</h3>
+            {state.setlists.length === 0 ? (
+              <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No tienes listas</p>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {state.setlists.map(setlist => (
+                  <button key={setlist.id} onClick={() => { addSongToSetlist(setlist.id, { songId: song.id, transposition: 0, notes: '', order: setlist.songs.length }); setShowAddToList(false); showNotification('Agregada a la lista', 'success'); }} className="w-full text-left p-3 rounded-xl border" style={{ borderColor: 'var(--border-color)' }}>
+                    <div className="font-medium text-sm">{setlist.name}</div>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{setlist.songs.length} canciones</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function HymnalView({ hymnal, onSelectSong, onBack, showNotification }: any) {
-  const { state, toggleFavorite, isFavorite } = useApp();
+function HymnalView({ hymnal, onSelectSong, onBack, showNotification, onEditHymnal }: any) {
+  const { state, toggleFavorite, isFavorite, addCustomSong } = useApp();
+  const [showAddSongModal, setShowAddSongModal] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newArtist, setNewArtist] = useState('');
+  const [newKey, setNewKey] = useState('C');
+  const [newLyrics, setNewLyrics] = useState('');
+
   const hymnalSongs = useMemo(() => {
     return [...allSongs, ...state.customSongs].filter(s => s.hymnalId === hymnal.id);
   }, [hymnal.id, state.customSongs]);
+
+  const handleAddSong = () => {
+    if (!newTitle.trim()) { showNotification('El título es obligatorio', 'error'); return; }
+    const nextNumber = getNextSongNumber(hymnal.id, [...allSongs, ...state.customSongs]);
+    const code = generateSongCode(hymnal, nextNumber);
+    const newSong: Song = {
+      id: `custom-${Date.now()}`,
+      title: newTitle.trim(),
+      artist: newArtist.trim() || 'Desconocido',
+      code,
+      number: nextNumber,
+      hymnalId: hymnal.id,
+      key: newKey,
+      timeSignature: '4/4',
+      bpm: 120,
+      language: hymnal.language.split('/')[0],
+      categories: [],
+      sections: [],
+      lyrics: newLyrics,
+      notes: '',
+    };
+    addCustomSong(newSong);
+    showNotification('Canción agregada', 'success');
+    setShowAddSongModal(false);
+    setNewTitle('');
+    setNewArtist('');
+    setNewLyrics('');
+  };
 
   return (
     <div className="space-y-4 pb-4">
@@ -382,6 +575,8 @@ function HymnalView({ hymnal, onSelectSong, onBack, showNotification }: any) {
         <button onClick={onBack} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={20} /></button>
         <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: hymnal.color + '20' }}>{hymnal.icon}</div>
         <div className="flex-1"><h2 className="text-lg font-bold">{hymnal.name}</h2><p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hymnalSongs.length} canciones • {hymnal.language}</p></div>
+        <button onClick={() => onEditHymnal(hymnal)} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Edit3 size={18} /></button>
+        <button onClick={() => setShowAddSongModal(true)} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={18} /></button>
       </div>
       <div className="space-y-2">
         {hymnalSongs.map(song => (
@@ -395,6 +590,21 @@ function HymnalView({ hymnal, onSelectSong, onBack, showNotification }: any) {
         ))}
         {hymnalSongs.length === 0 && <div className="text-center py-12"><Music size={40} style={{ color: 'var(--text-muted)' }} className="mx-auto mb-3" /><p className="text-sm" style={{ color: 'var(--text-muted)' }}>No hay canciones</p></div>}
       </div>
+
+      {showAddSongModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddSongModal(false)}>
+          <div className="w-full max-w-2xl rounded-2xl p-5 max-h-[90vh] overflow-y-auto space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Agregar Canción a {hymnal.name}</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs font-bold mb-1 block">Título *</label><input value={newTitle} onChange={e => setNewTitle(e.target.value)} className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} autoFocus /></div>
+              <div><label className="text-xs font-bold mb-1 block">Artista</label><input value={newArtist} onChange={e => setNewArtist(e.target.value)} className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} /></div>
+            </div>
+            <div><label className="text-xs font-bold mb-1 block">Tonalidad</label><select value={newKey} onChange={e => setNewKey(e.target.value)} className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}>{['C','C#','D','D#','E','F','F#','G','G#','A','A#','B','Am','Bm','Cm','Dm','Em','Fm','Gm'].map(k => <option key={k} value={k}>{k}</option>)}</select></div>
+            <div><label className="text-xs font-bold mb-1 block">Letra y Acordes</label><textarea value={newLyrics} onChange={e => setNewLyrics(e.target.value)} rows={10} className="w-full p-3 rounded-xl border text-sm font-mono" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} placeholder={`VERSO 1\n//G            Em          C          D\nLetra de la canción\n//G            Em          C          D\ncon acordes arriba`} /></div>
+            <div className="flex gap-2"><button onClick={() => setShowAddSongModal(false)} className="flex-1 py-3 rounded-xl font-medium" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button><button onClick={handleAddSong} className="flex-1 py-3 rounded-xl font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Agregar</button></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -470,7 +680,7 @@ function SetlistsPage({ onSelectSong, showNotification }: any) {
   const currentSetlist = state.setlists.find(s => s.id === selectedSetlist);
 
   const createSetlist = () => {
-    if (newSetlistName.trim()) { addSetlist(newSetlistName.trim()); setNewSetlistName(''); setShowCreateModal(false); }
+    if (newSetlistName.trim()) { addSetlist(newSetlistName.trim()); setNewSetlistName(''); setShowCreateModal(false); showNotification('Lista creada', 'success'); }
   };
 
   if (selectedSetlist && currentSetlist) {
@@ -529,6 +739,138 @@ function SetlistsPage({ onSelectSong, showNotification }: any) {
   );
 }
 
+function OrdersPage({ onSelectSong, showNotification }: any) {
+  const { state, addOrder, removeOrder, updateOrder } = useApp();
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newOrderName, setNewOrderName] = useState('');
+  const [newOrderType, setNewOrderType] = useState('Culto');
+  const [showAddSongModal, setShowAddSongModal] = useState(false);
+  const [songSearchQuery, setSongSearchQuery] = useState('');
+  const allAvailableSongs = useMemo(() => [...allSongs, ...state.customSongs], [state.customSongs]);
+
+  const createOrder = () => {
+    if (!newOrderName.trim()) return;
+    const newOrder: Order = {
+      id: crypto.randomUUID(),
+      name: newOrderName.trim(),
+      type: newOrderType,
+      date: new Date().toISOString().split('T')[0],
+      items: [],
+    };
+    addOrder(newOrder);
+    setSelectedOrder(newOrder);
+    setShowCreateModal(false);
+    setNewOrderName('');
+    showNotification('Orden creada', 'success');
+  };
+
+  const addItemToOrder = (song: Song) => {
+    if (!selectedOrder) return;
+    const updatedOrder = {
+      ...selectedOrder,
+      items: [...selectedOrder.items, { id: crypto.randomUUID(), title: song.title, songId: song.id, key: song.key }],
+    };
+    updateOrder(updatedOrder);
+    setSelectedOrder(updatedOrder);
+    setShowAddSongModal(false);
+    setSongSearchQuery('');
+    showNotification('Canción agregada', 'success');
+  };
+
+  const removeItemFromOrder = (itemId: string) => {
+    if (!selectedOrder) return;
+    const updatedOrder = { ...selectedOrder, items: selectedOrder.items.filter(item => item.id !== itemId) };
+    updateOrder(updatedOrder);
+    setSelectedOrder(updatedOrder);
+    showNotification('Elemento eliminado', 'success');
+  };
+
+  const filteredSongs = useMemo(() => {
+    if (!songSearchQuery.trim()) return allAvailableSongs.slice(0, 10);
+    const q = songSearchQuery.toLowerCase();
+    return allAvailableSongs.filter(s => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q) || s.code.toLowerCase().includes(q));
+  }, [allAvailableSongs, songSearchQuery]);
+
+  if (selectedOrder) {
+    return (
+      <div className="space-y-4 pb-20">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setSelectedOrder(null)} className="p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={20} /></button>
+          <div className="flex-1 min-w-0"><h2 className="text-xl font-bold truncate">{selectedOrder.name}</h2><p className="text-xs" style={{ color: 'var(--text-muted)' }}>{selectedOrder.type} • {selectedOrder.date} • {selectedOrder.items.length} elementos</p></div>
+          <button onClick={() => setShowAddSongModal(true)} className="p-2 rounded-xl text-white" style={{ backgroundColor: 'var(--accent)' }}><Plus size={20} /></button>
+        </div>
+        {selectedOrder.items.length === 0 ? (
+          <div className="text-center py-16 rounded-3xl border border-dashed" style={{ borderColor: 'var(--border-color)' }}><Music size={48} className="mx-auto mb-3 opacity-40" /><p className="text-sm" style={{ color: 'var(--text-muted)' }}>No hay elementos</p></div>
+        ) : (
+          <div className="space-y-2">
+            {selectedOrder.items.map((item, index) => {
+              const matchedSong = item.songId ? allAvailableSongs.find(s => s.id === item.songId) : null;
+              return (
+                <div key={item.id} className="rounded-2xl border p-3 flex items-center gap-3" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+                  <span className="text-xs font-bold w-5" style={{ color: 'var(--accent)' }}>{index + 1}.</span>
+                  <button onClick={() => matchedSong && onSelectSong(matchedSong)} className="flex-1 text-left min-w-0">
+                    <div className="font-semibold text-sm truncate">{item.title}</div>
+                    <div className="text-xs flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>{item.key && <span>Tono: {item.key}</span>}{matchedSong && <span className="font-medium" style={{ color: 'var(--accent)' }}>• Ver</span>}</div>
+                  </button>
+                  <button onClick={() => removeItemFromOrder(item.id)} className="p-2 rounded-xl text-red-500"><Trash2 size={16} /></button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {showAddSongModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddSongModal(false)}>
+            <div className="w-full max-w-md rounded-2xl p-5 space-y-4 max-h-[80vh] flex flex-col" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+              <h3 className="font-bold text-lg">Agregar canción</h3>
+              <input type="text" placeholder="Buscar..." value={songSearchQuery} onChange={e => setSongSearchQuery(e.target.value)} className="w-full p-3 text-sm rounded-xl border bg-transparent" style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} autoFocus />
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {filteredSongs.map(song => (
+                  <button key={song.id} onClick={() => addItemToOrder(song)} className="w-full text-left p-3 rounded-xl border flex items-center justify-between" style={{ borderColor: 'var(--border-color)' }}>
+                    <div><div className="font-medium text-sm">{song.title}</div><div className="text-xs" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key}</div></div>
+                    <Plus size={16} style={{ color: 'var(--accent)' }} />
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setShowAddSongModal(false)} className="w-full py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cerrar</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 pb-20">
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold">Órdenes de Culto</h1><p className="text-xs" style={{ color: 'var(--text-muted)' }}>Programa de reuniones</p></div><button onClick={() => setShowCreateModal(true)} className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={16} /> Nueva</button></div>
+      {state.orders.length === 0 ? (
+        <div className="text-center py-16 rounded-3xl border border-dashed" style={{ borderColor: 'var(--border-color)' }}><Music size={48} className="mx-auto mb-3 opacity-40" /><h3 className="font-bold text-base mb-1">No hay órdenes</h3></div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {state.orders.map(order => (
+            <div key={order.id} onClick={() => setSelectedOrder(order)} className="rounded-2xl border p-5 cursor-pointer transition-all hover:scale-[1.01]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
+              <div className="flex items-start justify-between gap-2 mb-2"><div><h3 className="font-bold text-base truncate">{order.name}</h3><p className="text-xs" style={{ color: 'var(--text-muted)' }}>{order.type} • {order.date}</p></div><button onClick={(e) => { e.stopPropagation(); if (confirm(`¿Eliminar "${order.name}"?`)) removeOrder(order.id); }} className="p-1.5 rounded-lg text-red-500"><Trash2 size={16} /></button></div>
+              <p className="text-xs font-semibold mb-3" style={{ color: 'var(--accent)' }}>{order.items.length} elementos</p>
+              <div className="space-y-1">{order.items.slice(0, 3).map((item, i) => (<div key={i} className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>• {item.title}</div>))}</div>
+              <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs font-bold" style={{ borderColor: 'var(--border-color)', color: 'var(--accent)' }}><span>Ver orden</span><ArrowRight size={14} /></div>
+            </div>
+          ))}
+        </div>
+      )}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowCreateModal(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Nueva Orden</h3>
+            <div><label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-muted)' }}>Título</label><input type="text" placeholder="Ej: Culto Dominical" value={newOrderName} onChange={e => setNewOrderName(e.target.value)} className="w-full p-3 text-sm rounded-xl border bg-transparent" style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} autoFocus /></div>
+            <div><label className="text-xs font-semibold mb-1 block" style={{ color: 'var(--text-muted)' }}>Tipo</label><select value={newOrderType} onChange={e => setNewOrderType(e.target.value)} className="w-full p-3 text-sm rounded-xl border bg-transparent" style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}><option value="Culto">Culto</option><option value="Reunión de Jóvenes">Reunión de Jóvenes</option><option value="Ensayo">Ensayo</option><option value="Especial">Especial</option></select></div>
+            <div className="flex gap-2"><button onClick={() => setShowCreateModal(false)} className="flex-1 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button><button onClick={createOrder} disabled={!newOrderName.trim()} className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50 text-white" style={{ backgroundColor: 'var(--accent)' }}>Crear</button></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolsPage() {
   const [activeTab, setActiveTab] = useState<'metronome' | 'tuner' | 'circle'>('metronome');
 
@@ -549,38 +891,23 @@ function ToolsPage() {
   );
 }
 
-function CircleOfFifths({ currentKey, onKeySelect, onClose }: { currentKey?: string; onKeySelect?: (key: string) => void; onClose?: () => void }) {
+function CircleOfFifths() {
   const majorKeys = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
-  const minorKeys = ['Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'D#m', 'Bbm', 'Fm', 'Cm', 'Gm', 'Dm'];
 
   return (
     <div className="space-y-4">
-      <div className="text-center">
-        <h3 className="text-lg font-bold mb-1">Círculo de Quintas</h3>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Explora las tonalidades y sus relaciones</p>
-      </div>
+      <div className="text-center"><h3 className="text-lg font-bold mb-1">Círculo de Quintas</h3><p className="text-xs" style={{ color: 'var(--text-muted)' }}>Explora las tonalidades y sus relaciones</p></div>
       <div className="relative w-full max-w-sm mx-auto aspect-square">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
-            <span className="text-lg font-bold">{currentKey || 'C'}</span>
-          </div>
-        </div>
+        <div className="absolute inset-0 flex items-center justify-center"><div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><span className="text-lg font-bold">C</span></div></div>
         {majorKeys.map((key, i) => {
           const angle = (i * 30 - 90) * (Math.PI / 180);
           const radius = 42;
           const x = 50 + radius * Math.cos(angle);
           const y = 50 + radius * Math.sin(angle);
-          return (
-            <button key={key} onClick={() => onKeySelect && onKeySelect(key)} className="absolute w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all hover:scale-110" style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', backgroundColor: key === currentKey ? 'var(--accent)' : 'var(--bg-tertiary)', color: key === currentKey ? 'white' : 'var(--text-primary)', border: `2px solid ${key === currentKey ? 'var(--accent)' : 'var(--border-color)'}` }}>{key}</button>
-          );
+          return (<button key={key} className="absolute w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all hover:scale-110" style={{ left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '2px solid var(--border-color)' }}>{key}</button>);
         })}
       </div>
-      <div className="grid grid-cols-4 gap-2">
-        {majorKeys.slice(0, 8).map(key => (
-          <button key={key} onClick={() => onKeySelect && onKeySelect(key)} className="py-2 rounded-lg text-xs font-bold" style={{ backgroundColor: key === currentKey ? 'var(--accent)' : 'var(--bg-tertiary)', color: key === currentKey ? 'white' : 'var(--text-primary)' }}>{key}</button>
-        ))}
-      </div>
-      {onClose && <button onClick={onClose} className="w-full py-3 rounded-xl text-sm font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cerrar</button>}
+      <div className="grid grid-cols-4 gap-2">{majorKeys.slice(0, 8).map(key => (<button key={key} className="py-2 rounded-lg text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>{key}</button>))}</div>
     </div>
   );
 }
