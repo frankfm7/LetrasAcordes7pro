@@ -10,6 +10,7 @@ import SplashScreen from './SplashScreen';
 import Metronome from './Metronome';
 import Tuner from './Tuner';
 import SongEditor from './SongEditor';
+import AddHymnalModal from './AddHymnalModal';
 import EditHymnalModal from './EditHymnalModal';
 
 export default function App() {
@@ -23,7 +24,7 @@ export default function App() {
 }
 
 function AppContent() {
-  const { state, setTheme, addCustomHymnal, updateCustomHymnal, removeCustomHymnal } = useApp();
+  const { state, setTheme, updateCustomHymnal } = useApp();
   const { showNotification } = useNotification();
   const [showSplash, setShowSplash] = useState(true);
   const [currentPage, setCurrentPage] = useState('home');
@@ -36,8 +37,6 @@ function AppContent() {
   const [showAddHymnalModal, setShowAddHymnalModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [newHymnalName, setNewHymnalName] = useState('');
-  const [newHymnalDesc, setNewHymnalDesc] = useState('');
 
   useEffect(() => {
     document.documentElement.className = state.preferences.theme;
@@ -100,24 +99,7 @@ function AppContent() {
     input.click();
   }, [showNotification]);
 
-  const handleCreateHymnal = () => {
-    if (!newHymnalName.trim()) return;
-    const newHymnal: Hymnal = {
-      id: `custom-${Date.now()}`,
-      name: newHymnalName.trim(),
-      description: newHymnalDesc.trim(),
-      language: 'Castellano',
-      icon: '🎵',
-      color: '#a855f7',
-      isCustom: true,
-      codePrefix: newHymnalName.trim().charAt(0).toUpperCase(),
-    };
-    addCustomHymnal(newHymnal);
-    showNotification('Cancionero creado', 'success');
-    setNewHymnalName('');
-    setNewHymnalDesc('');
-    setShowAddHymnalModal(false);
-  };
+
 
   if (showSplash) return <SplashScreen onComplete={() => setShowSplash(false)} />;
 
@@ -164,17 +146,7 @@ function AppContent() {
         <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
       )}
       {showAddHymnalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddHymnalModal(false)}>
-          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-lg">Nuevo Cancionero</h3>
-            <input type="text" placeholder="Nombre" value={newHymnalName} onChange={e => setNewHymnalName(e.target.value)} autoFocus className="w-full p-3 text-sm rounded-xl border bg-transparent" style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
-            <input type="text" placeholder="Descripción (opcional)" value={newHymnalDesc} onChange={e => setNewHymnalDesc(e.target.value)} className="w-full p-3 text-sm rounded-xl border bg-transparent" style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
-            <div className="flex gap-2">
-              <button onClick={() => setShowAddHymnalModal(false)} className="flex-1 py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
-              <button onClick={handleCreateHymnal} disabled={!newHymnalName.trim()} className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Crear</button>
-            </div>
-          </div>
-        </div>
+        <AddHymnalModal onClose={() => setShowAddHymnalModal(false)} />
       )}
       {showExportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowExportModal(false)}>

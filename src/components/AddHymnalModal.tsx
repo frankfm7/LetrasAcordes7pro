@@ -1,25 +1,27 @@
 import { useState } from 'react';
 import { Hymnal } from '../types';
-import { X, Check, Image, Trash2, Save } from 'lucide-react';
+import { X, Check, Image, Trash2, Plus } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { useNotification } from './NotificationProvider';
 
 const ICONS = ['🎵', '🎶', '🎸', '🎹', '🥁', '🎺', '🎻', '🎤', '⛪', '🏔️', '🌿', '✍️', '📖', '🕊️', '⭐', '🌟', '🎼', '🎯', '❤️', '🔥', '🌊', '🌙', '☀️', '🌈', '🦋', '🌺', '🍀', '🎯', '🏆', '💎'];
 const COLORS = ['#a855f7', '#7c3aed', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#10b981', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899', '#d946ef', '#8b5cf6'];
 const DEFAULT_LANGUAGES = ['Castellano', 'Aymara', 'Quechua', 'Inglés', 'Portugués', 'Francés', 'Italiano', 'Alemán'];
 
-interface EditHymnalModalProps {
-  hymnal: Hymnal;
+interface AddHymnalModalProps {
   onClose: () => void;
-  onSave: (hymnal: Hymnal) => void;
 }
 
-export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalModalProps) {
-  const [name, setName] = useState(hymnal.name);
-  const [description, setDescription] = useState(hymnal.description);
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(hymnal.language.split('/'));
-  const [icon, setIcon] = useState(hymnal.icon);
-  const [color, setColor] = useState(hymnal.color);
-  const [codePrefix, setCodePrefix] = useState(hymnal.codePrefix || '');
-  const [coverImage, setCoverImage] = useState<string | null>(hymnal.image || null);
+export default function AddHymnalModal({ onClose }: AddHymnalModalProps) {
+  const { addCustomHymnal } = useApp();
+  const { showNotification } = useNotification();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['Castellano']);
+  const [icon, setIcon] = useState('🎵');
+  const [color, setColor] = useState('#a855f7');
+  const [codePrefix, setCodePrefix] = useState('');
+  const [coverImage, setCoverImage] = useState<string | null>(null);
   const [showAddLanguage, setShowAddLanguage] = useState(false);
   const [newLanguageName, setNewLanguageName] = useState('');
   const [customLanguages, setCustomLanguages] = useState<string[]>([]);
@@ -56,26 +58,34 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
   };
 
   const handleSave = () => {
-    if (!name.trim()) return;
-    const prefix = codePrefix.trim() || hymnal.id.charAt(0).toUpperCase();
-    const updatedHymnal: Hymnal = {
-      ...hymnal,
+    if (!name.trim()) {
+      showNotification('El nombre es obligatorio', 'error');
+      return;
+    }
+
+    const prefix = codePrefix.trim() || name.trim().charAt(0).toUpperCase();
+    const newHymnal: Hymnal = {
+      id: `custom-${Date.now()}`,
       name: name.trim(),
       description: description.trim(),
       language: selectedLanguages.join('/'),
       icon,
       color,
+      isCustom: true,
       codePrefix: prefix,
       image: coverImage || undefined,
     };
-    onSave(updatedHymnal);
+
+    addCustomHymnal(newHymnal);
+    showNotification('Cancionero creado exitosamente', 'success');
+    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
       <div className="w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h3 className="font-bold text-xl">Editar Cancionero</h3>
+          <h3 className="font-bold text-xl">Crear Nuevo Cancionero</h3>
           <button onClick={onClose} className="p-2 rounded-lg hover:opacity-70" style={{ backgroundColor: 'var(--bg-tertiary)' }}><X size={20} /></button>
         </div>
 
@@ -226,7 +236,7 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
           <div className="flex gap-3 pt-2">
             <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
             <button onClick={handleSave} disabled={!name.trim()} className="flex-1 py-3 rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
-              <Save size={16} /> Guardar Cambios
+              <Plus size={16} /> Crear Cancionero
             </button>
           </div>
         </div>
