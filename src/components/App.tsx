@@ -757,6 +757,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
 
 function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onDeleteHymnal, showNotification }: any) {
   const { state, toggleFavorite, isFavorite, addMultipleToFavorites, removeMultipleCustomSongs } = useApp();
+  const [selectionMode, setSelectionMode] = useState(false);
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -782,6 +783,15 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [showSelectionMenu]);
+
+  // Toggle modo de selección
+  const toggleSelectionMode = () => {
+    if (selectionMode) {
+      // Al desactivar, limpiar selecciones
+      setSelectedSongs([]);
+    }
+    setSelectionMode(!selectionMode);
+  };
 
   // Toggle selección de una canción
   const toggleSongSelection = (songId: string) => {
@@ -889,20 +899,20 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
         <div className="flex-1"><h2 className="text-lg font-bold">{hymnal.name}</h2><p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hymnalSongs.length} canciones • {hymnal.language}</p></div>
         <button onClick={() => onAddSong(hymnal)} className="p-2.5 rounded-xl card-shadow-md hover:card-shadow-lg transition-all" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={18} /></button>
         
-        {/* Botón de selección múltiple */}
+        {/* Botón de modo selección */}
         {hymnalSongs.length > 0 && (
           <button 
-            onClick={toggleSelectAll}
+            onClick={toggleSelectionMode}
             className="p-2.5 rounded-xl card-shadow-sm hover:card-shadow-md transition-all" 
-            style={{ backgroundColor: selectedSongs.length > 0 ? 'var(--accent)' : 'var(--bg-tertiary)', color: selectedSongs.length > 0 ? 'white' : 'var(--text-primary)' }}
-            title={selectedSongs.length === hymnalSongs.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+            style={{ backgroundColor: selectionMode ? 'var(--accent)' : 'var(--bg-tertiary)', color: selectionMode ? 'white' : 'var(--text-primary)' }}
+            title={selectionMode ? 'Salir de selección' : 'Modo selección'}
           >
-            {selectedSongs.length === hymnalSongs.length ? <CheckSquare size={18} /> : <Square size={18} />}
+            {selectionMode ? <X size={18} /> : <CheckSquare size={18} />}
           </button>
         )}
         
-        {/* Menú de acciones de selección múltiple */}
-        {selectedSongs.length > 0 && (
+        {/* Menú de acciones de selección múltiple - solo visible en modo selección */}
+        {selectionMode && selectedSongs.length > 0 && (
           <div className="relative">
             <button 
               onClick={(e) => { e.stopPropagation(); setShowSelectionMenu(!showSelectionMenu); }} 
@@ -913,7 +923,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
             </button>
             {showSelectionMenu && (
               <div onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-                <button onClick={() => { toggleSelectAll(); setShowSelectionMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
+                <button onClick={() => toggleSelectAll()} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
                   <CheckSquare size={14} /> {selectedSongs.length === hymnalSongs.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
                 </button>
                 <div className="border-t" style={{ borderColor: 'var(--border-color)' }}></div>
@@ -937,18 +947,11 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
           </div>
         )}
       </div>
-      {/* Indicador de selección */}
-      {selectedSongs.length > 0 && (
+      {/* Indicador de selección - solo visible en modo selección */}
+      {selectionMode && (
         <div className="px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-between" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)', border: '2px solid var(--accent)' }}>
           <span>✓ {selectedSongs.length} canción{selectedSongs.length !== 1 ? 'es' : ''} seleccionada{selectedSongs.length !== 1 ? 's' : ''}</span>
-          <span className="text-xs font-normal">Usa los checkboxes para seleccionar/deseleccionar</span>
-        </div>
-      )}
-      
-      {/* Instrucción cuando no hay selección */}
-      {selectedSongs.length === 0 && hymnalSongs.length > 0 && (
-        <div className="px-4 py-2 rounded-xl text-xs" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
-          💡 Marca los checkboxes para seleccionar canciones y usar las acciones múltiples
+          <span className="text-xs font-normal">Modo selección activo</span>
         </div>
       )}
       
@@ -965,24 +968,28 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
                   borderWidth: isSelected ? '2px' : '1px'
                 }}
               >
-                <input 
-                  type="checkbox" 
-                  checked={isSelected}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    toggleSongSelection(song.id);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-5 h-5 rounded cursor-pointer accent-purple-600 flex-shrink-0"
-                />
-                <div className="flex-1 text-left cursor-pointer" onClick={() => onSelectSong(song)}>
+                {selectionMode && (
+                  <input 
+                    type="checkbox" 
+                    checked={isSelected}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggleSongSelection(song.id);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-5 h-5 rounded cursor-pointer accent-purple-600 flex-shrink-0"
+                  />
+                )}
+                <div className="flex-1 text-left cursor-pointer" onClick={() => selectionMode ? toggleSongSelection(song.id) : onSelectSong(song)}>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{getDisplayCode(song)}</span>
                     <span className="font-medium text-sm">{song.title}</span>
                   </div>
                   <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.timeSignature} • {song.bpm} BPM</div>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(song.id); }} className="p-2 rounded-lg flex-shrink-0" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={18} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
+                {!selectionMode && (
+                  <button onClick={(e) => { e.stopPropagation(); toggleFavorite(song.id); }} className="p-2 rounded-lg flex-shrink-0" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={18} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
+                )}
               </div>
           );
         })}
