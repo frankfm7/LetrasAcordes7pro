@@ -6,7 +6,7 @@ export const hymnals: Hymnal[] = [
     name: 'Mis Canciones',
     description: 'Creaciones personales',
     language: 'Castellano',
-    icon: '📖🔥',
+    icon: '📖',
     color: '#f97316',
     isCustom: true,
     codePrefix: 'M',

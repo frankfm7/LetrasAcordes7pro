@@ -297,7 +297,14 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal, onEditH
   const { state } = useApp();
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const allAvailableSongs = useMemo(() => [...allSongs, ...state.customSongs], [state.customSongs]);
-  const allHymnals = useMemo(() => [...hymnals, ...state.customHymnals], [state.customHymnals]);
+  
+  // Combinar himnarios predeterminados con custom, evitando duplicados
+  // Si un himnario predeterminado fue editado, usar la versión custom
+  const allHymnals = useMemo(() => {
+    const customIds = new Set(state.customHymnals.map(h => h.id));
+    const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+    return [...defaultNotEdited, ...state.customHymnals];
+  }, [state.customHymnals]);
 
   // Cerrar menú al hacer clic fuera
   useEffect(() => {
@@ -367,24 +374,24 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal, onEditH
             const hymnalSongs = allAvailableSongs.filter(s => s.hymnalId === hymnal.id);
             return (
               <div key={hymnal.id} className="relative group">
-                <button onClick={() => onSelectHymnal(hymnal)} className="rounded-2xl relative overflow-hidden p-3 sm:p-5 flex flex-col justify-between text-left transition-all hover-lift active:scale-[0.97] w-full" style={{ aspectRatio: '3/4', background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 8px 24px ${hymnal.color}44, 0 2px 8px rgba(0,0,0,0.1)` }}>
+                <div className="rounded-2xl relative overflow-hidden p-3 sm:p-5 flex flex-col justify-between text-left transition-all hover-lift active:scale-[0.97] w-full cursor-pointer" style={{ aspectRatio: '3/4', background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 8px 24px ${hymnal.color}44, 0 2px 8px rgba(0,0,0,0.1)` }} onClick={() => onSelectHymnal(hymnal)}>
                   <div><div className="text-4xl sm:text-6xl mb-2 sm:mb-4 drop-shadow-lg">{hymnal.icon}</div><div className="text-white font-bold text-sm sm:text-xl leading-tight mb-1 sm:mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
                   <div><div className="text-white/95 text-xs sm:text-base font-semibold" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/80 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
-                </button>
-                <div className="absolute top-2 right-2">
-                  <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === hymnal.id ? null : hymnal.id); }} className="p-2 rounded-xl bg-black/40 backdrop-blur-sm text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 card-shadow-md">
-                    <MoreVertical size={14} />
-                  </button>
-                  {menuOpenId === hymnal.id && (
-                    <div onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-                      <button onClick={() => handleMenuAction('edit', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
-                      <button onClick={() => handleMenuAction('delete', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80 text-red-500"><Trash2 size={14} /> Eliminar</button>
-                      <button onClick={() => handleMenuAction('import', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
-                      <button onClick={() => handleMenuAction('export', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
-                      <button onClick={() => handleMenuAction('capture', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Camera size={14} /> Capturar imagen</button>
-                      <button onClick={() => handleMenuAction('share', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
-                    </div>
-                  )}
+                  <div className="absolute top-2 right-2">
+                    <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === hymnal.id ? null : hymnal.id); }} className="p-2 rounded-xl bg-black/40 backdrop-blur-sm text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 card-shadow-md">
+                      <MoreVertical size={14} />
+                    </button>
+                    {menuOpenId === hymnal.id && (
+                      <div onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+                        <button onClick={() => handleMenuAction('edit', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
+                        <button onClick={() => handleMenuAction('delete', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80 text-red-500"><Trash2 size={14} /> Eliminar</button>
+                        <button onClick={() => handleMenuAction('import', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
+                        <button onClick={() => handleMenuAction('export', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
+                        <button onClick={() => handleMenuAction('capture', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Camera size={14} /> Capturar imagen</button>
+                        <button onClick={() => handleMenuAction('share', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
