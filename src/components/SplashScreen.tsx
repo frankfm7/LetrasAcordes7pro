@@ -24,8 +24,8 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
         )}
         {showContent && (
           <div className="animate-fade-in">
-            <h1 className="text-5xl font-black text-white mb-2">Cancionero<span className="font-black">7Pro</span></h1>
-            <p className="text-white/80 text-lg">Gestión Profesional de Alabanzas</p>
+            <h1 className="text-5xl font-black text-white mb-2">Cancionero<span style={{ color: '#fbbf24' }}>7Pro</span></h1>
+            <p className="text-white/80 text-lg">Gestión Profesional de Letras y Acordes</p>
           </div>
         )}
         {showContent && (

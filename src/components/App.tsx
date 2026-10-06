@@ -12,6 +12,7 @@ import Tuner from './Tuner';
 import SongEditor from './SongEditor';
 import AddHymnalModal from './AddHymnalModal';
 import EditHymnalModal from './EditHymnalModal';
+import ExportModal from './ExportModal';
 
 export default function App() {
   return (
@@ -333,7 +334,7 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) 
             return (
               <div key={hymnal.id} className="relative group">
                 <div className="rounded-2xl relative overflow-hidden p-3 sm:p-5 flex flex-col justify-between text-left transition-all hover-lift active:scale-[0.97] w-full cursor-pointer" style={{ aspectRatio: '3/4', ...backgroundStyle, boxShadow: `0 8px 24px ${hymnal.color}44, 0 2px 8px rgba(0,0,0,0.1)` }} onClick={() => onSelectHymnal(hymnal)}>
-                  <div><div className="text-4xl sm:text-6xl mb-2 sm:mb-4 drop-shadow-lg">{hymnal.icon}</div><div className="text-white font-bold text-sm sm:text-xl leading-tight mb-1 sm:mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
+                  <div><div className="text-3xl sm:text-4xl mb-2 sm:mb-3 drop-shadow-lg">{hymnal.icon}</div><div className="text-white font-bold text-sm sm:text-xl leading-tight mb-1 sm:mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
                   <div><div className="text-white/95 text-xs sm:text-base font-semibold" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/80 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
                 </div>
               </div>
@@ -388,6 +389,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   });
   const [editingNote, setEditingNote] = useState<'note2' | 'note3' | null>(null);
   const [showOriginalNote, setShowOriginalNote] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Cerrar menú de acciones al hacer clic fuera
   useEffect(() => {
@@ -601,88 +603,92 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
 
   return (
     <div className="max-w-3xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
-      <div className="flex-shrink-0 flex items-center gap-2 mb-2">
-        <button onClick={onBack} className="p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={18} /></button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-base font-bold truncate">{song.title}</h1>
-          <div className="flex items-center gap-2 text-xs flex-wrap" style={{ color: 'var(--text-muted)' }}>
-            <span>{song.artist}</span>
-            <span>•</span>
-            <span className="font-bold" style={{ color: 'var(--accent)' }} translate="no">{song.key}</span>
-            <span translate="no">{song.timeSignature}</span>
-            <span translate="no">{song.bpm} BPM</span>
-            {/* Botón nota original - clic para volver al tono original */}
-            <button
-              onClick={() => setTransposition(0)}
-              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: transposition === 0 ? 'var(--accent)' : 'var(--bg-tertiary)',
-                color: transposition === 0 ? 'white' : 'var(--text-primary)',
-                border: '1px solid var(--border-color)'
-              }}
-              title="Volver al tono original"
-              translate="no"
-            >
-              {song.key}
-            </button>
-            {/* Nota Personal 1 - doble clic para seleccionar tono, clic para aplicar */}
-            <button
-              onClick={() => {
-                const note2Formatted = formatNote(personalNotes.note2);
-                if (note2Formatted) {
-                  handleKeyChange(note2Formatted);
-                }
-              }}
-              onDoubleClick={() => setEditingNote('note2')}
-              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'var(--accent)' : formatNote(personalNotes.note2) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                color: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'white' : formatNote(personalNotes.note2) ? 'var(--accent)' : 'var(--text-muted)',
-                border: '1px solid var(--border-color)'
-              }}
-              title="Clic para aplicar, doble clic para cambiar"
-              translate="no"
-            >
-              {formatNote(personalNotes.note2) || '—'}
-            </button>
-            {/* Nota Personal 2 - doble clic para seleccionar tono, clic para aplicar */}
-            <button
-              onClick={() => {
-                const note3Formatted = formatNote(personalNotes.note3);
-                if (note3Formatted) {
-                  handleKeyChange(note3Formatted);
-                }
-              }}
-              onDoubleClick={() => setEditingNote('note3')}
-              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'var(--accent)' : formatNote(personalNotes.note3) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                color: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'white' : formatNote(personalNotes.note3) ? 'var(--accent)' : 'var(--text-muted)',
-                border: '1px solid var(--border-color)'
-              }}
-              title="Clic para aplicar, doble clic para cambiar"
-              translate="no"
-            >
-              {formatNote(personalNotes.note3) || '—'}
-            </button>
-          </div>
-        </div>
-        <button onClick={() => toggleFavorite(song.id)} className="p-2 rounded-xl" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={20} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
+      {/* Fila 1: Botón volver + Título + Badge de idioma */}
+      <div className="flex-shrink-0 flex items-center gap-2 mb-1">
+        <button onClick={onBack} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={16} /></button>
+        <h1 className="flex-1 text-sm sm:text-base font-bold truncate">{song.title}</h1>
         {song.lyricsByLanguage && Object.keys(song.lyricsByLanguage).length > 1 && (
-          <button onClick={() => { const languages = Object.keys(song.lyricsByLanguage!); const idx = languages.indexOf(currentLanguage); setCurrentLanguage(languages[(idx + 1) % languages.length]); }} className="px-3 py-1.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>{currentLanguage}</button>
+          <button onClick={() => { const languages = Object.keys(song.lyricsByLanguage!); const idx = languages.indexOf(currentLanguage); setCurrentLanguage(languages[(idx + 1) % languages.length]); }} className="px-2 py-1 rounded-lg text-xs font-semibold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>{currentLanguage}</button>
         )}
-        <button onClick={() => setShowConfig(!showConfig)} className="p-2 rounded-xl" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={18} /></button>
-        <div className="relative" data-menu>
-          <button onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }} className="p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={18} /></button>
-          {showActionsMenu && (
-            <div className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-              <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
-              <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
-              <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
-              <button onClick={() => { showNotification('Importar canción (próximamente)', 'info'); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
-              <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
-            </div>
-          )}
+      </div>
+
+      {/* Fila 2: Información secundaria + Transposición + Acciones */}
+      <div className="flex-shrink-0 flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-1.5 text-xs flex-wrap flex-1 min-w-0" style={{ color: 'var(--text-muted)' }}>
+          <span className="truncate">{song.artist}</span>
+          <span>•</span>
+          <span className="font-bold" style={{ color: 'var(--accent)' }} translate="no">{song.key}</span>
+          <span translate="no">{song.timeSignature}</span>
+          <span translate="no">{song.bpm} BPM</span>
+          {/* Botones de transposición */}
+          <button
+            onClick={() => setTransposition(0)}
+            className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
+            style={{ 
+              backgroundColor: transposition === 0 ? 'var(--accent)' : 'var(--bg-tertiary)',
+              color: transposition === 0 ? 'white' : 'var(--text-primary)',
+              border: '1px solid var(--border-color)'
+            }}
+            title="Volver al tono original"
+            translate="no"
+          >
+            {song.key}
+          </button>
+          <button
+            onClick={() => {
+              const note2Formatted = formatNote(personalNotes.note2);
+              if (note2Formatted) {
+                handleKeyChange(note2Formatted);
+              }
+            }}
+            onDoubleClick={() => setEditingNote('note2')}
+            className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
+            style={{ 
+              backgroundColor: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'var(--accent)' : formatNote(personalNotes.note2) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+              color: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'white' : formatNote(personalNotes.note2) ? 'var(--accent)' : 'var(--text-muted)',
+              border: '1px solid var(--border-color)'
+            }}
+            title="Clic para aplicar, doble clic para cambiar"
+            translate="no"
+          >
+            {formatNote(personalNotes.note2) || '—'}
+          </button>
+          <button
+            onClick={() => {
+              const note3Formatted = formatNote(personalNotes.note3);
+              if (note3Formatted) {
+                handleKeyChange(note3Formatted);
+              }
+            }}
+            onDoubleClick={() => setEditingNote('note3')}
+            className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
+            style={{ 
+              backgroundColor: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'var(--accent)' : formatNote(personalNotes.note3) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+              color: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'white' : formatNote(personalNotes.note3) ? 'var(--accent)' : 'var(--text-muted)',
+              border: '1px solid var(--border-color)'
+            }}
+            title="Clic para aplicar, doble clic para cambiar"
+            translate="no"
+          >
+            {formatNote(personalNotes.note3) || '—'}
+          </button>
+        </div>
+        {/* Iconos de acción */}
+        <div className="flex items-center gap-1">
+          <button onClick={() => toggleFavorite(song.id)} className="p-1.5 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={16} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
+          <button onClick={() => setShowConfig(!showConfig)} className="p-1.5 rounded-lg" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={16} /></button>
+          <div className="relative" data-menu>
+            <button onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={16} /></button>
+            {showActionsMenu && (
+              <div className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+                <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
+                <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
+                <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
+                <button onClick={() => { setShowExportModal(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
+                <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -773,7 +779,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
             </div>
           </div>
         )}
-        <div className="p-5 md:p-8" translate="no">{renderLyrics()}</div>
+        <div id="song-lyrics-container" className="p-5 md:p-8" translate="no">{renderLyrics()}</div>
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
@@ -855,6 +861,10 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         </button>
       </div>
 
+      {showExportModal && (
+        <ExportModal songs={[song]} onClose={() => setShowExportModal(false)} songElementId="song-lyrics-container" />
+      )}
+
       {showAddToList && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddToList(false)}>
           <div className="w-full max-w-md rounded-2xl p-5" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
@@ -884,6 +894,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [showHymnalMenu, setShowHymnalMenu] = useState(false);
+  const [showHymnalExportModal, setShowHymnalExportModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
   const hymnalSongs = useMemo(() => {
@@ -974,50 +985,12 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
         }
         break;
       case 'export':
-        setShowExportModal(true);
+        setShowHymnalExportModal(true);
         break;
     }
   };
 
-  // Exportar canciones seleccionadas
-  const handleExport = (format: string) => {
-    const selectedSongsData = hymnalSongs.filter(s => selectedSongs.includes(s.id));
-    let content = '';
-    let filename = '';
-    let mimeType = '';
 
-    switch (format) {
-      case 'json':
-        content = JSON.stringify(selectedSongsData, null, 2);
-        filename = `${hymnal.name}_seleccion.json`;
-        mimeType = 'application/json';
-        break;
-      case 'txt':
-        content = selectedSongsData.map(s => `${getDisplayCode(s)} - ${s.title}\n${s.artist}\n\n${s.lyrics}\n\n${'='.repeat(50)}\n\n`).join('');
-        filename = `${hymnal.name}_seleccion.txt`;
-        mimeType = 'text/plain';
-        break;
-      case 'pdf':
-        showNotification('Exportación a PDF (próximamente)', 'info');
-        setShowExportModal(false);
-        return;
-      case 'docx':
-        showNotification('Exportación a Word (próximamente)', 'info');
-        setShowExportModal(false);
-        return;
-    }
-
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    showNotification(`${selectedSongs.length} canciones exportadas`, 'success');
-    setShowExportModal(false);
-    setSelectedSongs([]);
-  };
 
 
 
@@ -1208,28 +1181,11 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
       </div>
       
       {/* Modal de exportación */}
-      {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowExportModal(false)}>
-          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-lg">Exportar {selectedSongs.length} canciones</h3>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Selecciona el formato de exportación:</p>
-            <div className="space-y-2">
-              <button onClick={() => handleExport('json')} className="w-full p-3 rounded-xl border text-left text-sm font-medium hover:scale-[1.02] transition-all" style={{ borderColor: 'var(--border-color)' }}>
-                📄 Documento JSON
-              </button>
-              <button onClick={() => handleExport('txt')} className="w-full p-3 rounded-xl border text-left text-sm font-medium hover:scale-[1.02] transition-all" style={{ borderColor: 'var(--border-color)' }}>
-                📝 Documento de texto
-              </button>
-              <button onClick={() => handleExport('pdf')} className="w-full p-3 rounded-xl border text-left text-sm font-medium hover:scale-[1.02] transition-all" style={{ borderColor: 'var(--border-color)' }}>
-                📕 Documento PDF
-              </button>
-              <button onClick={() => handleExport('docx')} className="w-full p-3 rounded-xl border text-left text-sm font-medium hover:scale-[1.02] transition-all" style={{ borderColor: 'var(--border-color)' }}>
-                📘 Documento Word
-              </button>
-            </div>
-            <button onClick={() => setShowExportModal(false)} className="w-full py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
-          </div>
-        </div>
+      {showHymnalExportModal && (
+        <ExportModal 
+          songs={hymnalSongs.filter(s => selectedSongs.includes(s.id))} 
+          onClose={() => setShowHymnalExportModal(false)} 
+        />
       )}
     </div>
   );
