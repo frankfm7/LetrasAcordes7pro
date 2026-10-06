@@ -742,45 +742,78 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
-        {/* Menú de velocidades */}
+        {/* Ventana grande de control de velocidad */}
         {showSpeedMenu && (
-          <div className="rounded-xl p-3 mb-2 w-32" style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}>
-            <div className="text-[10px] text-white/70 mb-2 text-center font-semibold">VELOCIDAD</div>
-            <div className="flex flex-col gap-1">
-              {[
-                { value: 5, label: 'Muy lento' },
-                { value: 10, label: 'Lento' },
-                { value: 15, label: 'Normal' },
-                { value: 25, label: 'Rápido' },
-                { value: 40, label: 'Muy rápido' }
-              ].map(speed => (
-                <button
-                  key={speed.value}
-                  onClick={() => { setScrollSpeed(speed.value); setShowSpeedMenu(false); }}
-                  className="px-2 py-1.5 rounded-lg text-xs text-left transition-all hover:bg-white/20"
-                  style={{ 
-                    backgroundColor: scrollSpeed === speed.value ? 'rgba(139, 92, 246, 0.6)' : 'transparent',
-                    color: 'white'
-                  }}
-                >
-                  {speed.label}
-                </button>
-              ))}
+          <div className="rounded-2xl p-4 mb-2 w-56" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }}>
+            <div className="text-xs text-white/90 mb-3 text-center font-bold">CONTROL DE VELOCIDAD</div>
+            
+            {/* Velocidad actual */}
+            <div className="text-center mb-3">
+              <div className="text-3xl font-bold text-white">{scrollSpeed}</div>
+              <div className="text-[10px] text-white/60">velocidad actual</div>
+            </div>
+            
+            {/* Slider para velocidad personalizada */}
+            <div className="mb-3">
+              <input 
+                type="range" 
+                min="1" 
+                max="50" 
+                step="1"
+                value={scrollSpeed} 
+                onChange={e => setScrollSpeed(Number(e.target.value))} 
+                className="w-full accent-purple-400"
+                style={{ opacity: 0.9 }}
+              />
+              <div className="flex justify-between text-[9px] text-white/50 mt-1">
+                <span>Lento</span>
+                <span>Rápido</span>
+              </div>
+            </div>
+            
+            {/* Velocidades predefinidas */}
+            <div className="border-t border-white/20 pt-2">
+              <div className="text-[10px] text-white/60 mb-2">Velocidades rápidas:</div>
+              <div className="grid grid-cols-3 gap-1">
+                {[5, 10, 15, 20, 30, 40].map(speed => (
+                  <button
+                    key={speed}
+                    onClick={() => setScrollSpeed(speed)}
+                    className="px-2 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/20"
+                    style={{ 
+                      backgroundColor: scrollSpeed === speed ? 'rgba(139, 92, 246, 0.6)' : 'rgba(255,255,255,0.1)',
+                      color: 'white'
+                    }}
+                  >
+                    {speed}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
         
-        {/* Botón de velocidad */}
+        {/* Botón de velocidad - más grande y transparente */}
         <button 
           onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-          className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95 text-xs font-bold"
-          style={{ backgroundColor: 'rgba(139, 92, 246, 0.75)', color: 'white', backdropFilter: 'blur(5px)' }}
+          className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95 text-sm font-bold"
+          style={{ backgroundColor: 'rgba(139, 92, 246, 0.5)', color: 'white', backdropFilter: 'blur(10px)' }}
         >
           {scrollSpeed}
         </button>
         
-        {/* Botón de play/pause */}
-        <button onClick={() => setIsAutoScrolling(!isAutoScrolling)} className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.75)' : 'rgba(124,58,237,0.75)', color: 'white', backdropFilter: 'blur(5px)' }}>{isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}</button>
+        {/* Botón de play/pause - transparente */}
+        <button 
+          onClick={() => setIsAutoScrolling(!isAutoScrolling)} 
+          className="w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
+          style={{ 
+            backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.5)' : 'rgba(124,58,237,0.5)', 
+            color: 'white', 
+            backdropFilter: 'blur(10px)' 
+          }}
+        >
+          {isAutoScrolling ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
+        </button>
       </div>
 
       {showAddToList && (
