@@ -5,7 +5,7 @@ import { Song, Hymnal, Order, OrderItem } from '../types';
 import { songs as allSongs, hymnals, generateSongCode, getNextSongNumber } from '../data/songs';
 import { transposeLyrics } from '../utils/chords';
 import { generateSongShareText } from '../utils/shareUtils';
-import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save } from 'lucide-react';
+import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, ChevronDown, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save } from 'lucide-react';
 import SplashScreen from './SplashScreen';
 import Metronome from './Metronome';
 import Tuner from './Tuner';
@@ -994,10 +994,11 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
           <div className="relative" data-selection-menu>
             <button 
               onClick={(e) => { e.stopPropagation(); setShowSelectionMenu(!showSelectionMenu); }} 
-              className="p-2.5 rounded-xl card-shadow-md hover:card-shadow-lg transition-all" 
+              className="px-3 py-2 rounded-xl card-shadow-md hover:card-shadow-lg transition-all flex items-center gap-1.5" 
               style={{ backgroundColor: 'var(--accent)', color: 'white' }}
             >
-              <MoreVertical size={18} />
+              <span className="text-xs font-semibold">Más opciones</span>
+              <ChevronDown size={14} />
             </button>
             {showSelectionMenu && (
               <div className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
