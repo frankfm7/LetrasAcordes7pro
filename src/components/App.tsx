@@ -360,7 +360,27 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   // Estados para las notas personales
   const [personalNotes, setPersonalNotes] = useState<{ note2: string; note3: string }>(() => {
     const saved = localStorage.getItem(`song-notes-${initialSong.id}`);
-    return saved ? JSON.parse(saved) : { note2: '', note3: '' };
+    if (!saved) return { note2: '', note3: '' };
+    
+    try {
+      const parsed = JSON.parse(saved);
+      // Validar que sean tonos musicales válidos
+      const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+                          'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
+      
+      const note2 = validNotes.includes(parsed.note2) ? parsed.note2 : '';
+      const note3 = validNotes.includes(parsed.note3) ? parsed.note3 : '';
+      
+      // Si hay datos inválidos, limpiar el localStorage
+      if (parsed.note2 !== note2 || parsed.note3 !== note3) {
+        localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify({ note2, note3 }));
+      }
+      
+      return { note2, note3 };
+    } catch {
+      localStorage.removeItem(`song-notes-${initialSong.id}`);
+      return { note2: '', note3: '' };
+    }
   });
   const [editingNote, setEditingNote] = useState<'note2' | 'note3' | null>(null);
   const [showOriginalNote, setShowOriginalNote] = useState(false);
@@ -469,6 +489,11 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       const semitones = targetIndex - baseIndex;
       setTransposition(semitones);
       
+      // Validar que el tono sea válido antes de guardar
+      const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+                          'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
+      if (!validNotes.includes(targetKey)) return;
+      
       // Guardar el tono seleccionado en la nota personal correspondiente
       if (editingNote === 'note2') {
         const updated = { ...personalNotes, note2: targetKey };
@@ -480,6 +505,13 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
       }
     }
+  };
+
+  // Función helper para validar y formatear tonos
+  const formatNote = (note: string): string => {
+    const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+                        'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
+    return validNotes.includes(note) ? note : '';
   };
 
   const renderLyrics = () => {
@@ -539,9 +571,10 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
             {/* Nota Personal 1 - doble clic para seleccionar tono, clic para aplicar */}
             <button
               onClick={() => {
-                if (personalNotes.note2) {
+                const note2Formatted = formatNote(personalNotes.note2);
+                if (note2Formatted) {
                   const baseKey = song.key.replace('m', '');
-                  const targetBase = personalNotes.note2.replace('m', '');
+                  const targetBase = note2Formatted.replace('m', '');
                   const baseIndex = NOTES.indexOf(baseKey);
                   const targetIndex = NOTES.indexOf(targetBase);
                   if (baseIndex !== -1 && targetIndex !== -1) {
@@ -552,20 +585,21 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               onDoubleClick={() => setEditingNote('note2')}
               className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
               style={{ 
-                backgroundColor: personalNotes.note2 && getCurrentKey() === personalNotes.note2 ? 'var(--accent)' : personalNotes.note2 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                color: personalNotes.note2 && getCurrentKey() === personalNotes.note2 ? 'white' : personalNotes.note2 ? 'var(--accent)' : 'var(--text-muted)',
+                backgroundColor: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'var(--accent)' : formatNote(personalNotes.note2) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                color: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'white' : formatNote(personalNotes.note2) ? 'var(--accent)' : 'var(--text-muted)',
                 border: '1px solid var(--border-color)'
               }}
               title="Clic para aplicar, doble clic para cambiar"
             >
-              {personalNotes.note2 || '—'}
+              {formatNote(personalNotes.note2) || '—'}
             </button>
             {/* Nota Personal 2 - doble clic para seleccionar tono, clic para aplicar */}
             <button
               onClick={() => {
-                if (personalNotes.note3) {
+                const note3Formatted = formatNote(personalNotes.note3);
+                if (note3Formatted) {
                   const baseKey = song.key.replace('m', '');
-                  const targetBase = personalNotes.note3.replace('m', '');
+                  const targetBase = note3Formatted.replace('m', '');
                   const baseIndex = NOTES.indexOf(baseKey);
                   const targetIndex = NOTES.indexOf(targetBase);
                   if (baseIndex !== -1 && targetIndex !== -1) {
@@ -576,13 +610,13 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               onDoubleClick={() => setEditingNote('note3')}
               className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
               style={{ 
-                backgroundColor: personalNotes.note3 && getCurrentKey() === personalNotes.note3 ? 'var(--accent)' : personalNotes.note3 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                color: personalNotes.note3 && getCurrentKey() === personalNotes.note3 ? 'white' : personalNotes.note3 ? 'var(--accent)' : 'var(--text-muted)',
+                backgroundColor: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'var(--accent)' : formatNote(personalNotes.note3) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                color: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'white' : formatNote(personalNotes.note3) ? 'var(--accent)' : 'var(--text-muted)',
                 border: '1px solid var(--border-color)'
               }}
               title="Clic para aplicar, doble clic para cambiar"
             >
-              {personalNotes.note3 || '—'}
+              {formatNote(personalNotes.note3) || '—'}
             </button>
           </div>
         </div>
