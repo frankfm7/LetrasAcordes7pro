@@ -183,9 +183,13 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
           <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Cancionero</label>
           <select value={hymnalId} onChange={e => setHymnalId(e.target.value)}
                   className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}>
-            {[...hymnals, ...state.customHymnals].map(h => (
-              <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
-            ))}
+            {(() => {
+              const customIds = new Set(state.customHymnals.map(h => h.id));
+              const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+              return [...defaultNotEdited, ...state.customHymnals].map(h => (
+                <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
+              ));
+            })()}
           </select>
         </div>
 
