@@ -354,6 +354,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(15);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [isButtonTransparent, setIsButtonTransparent] = useState(true);
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialSong.language.split('/')[0]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
@@ -397,6 +398,15 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     }
   }, [showActionsMenu]);
 
+  // Cerrar menú de velocidad al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = () => setShowSpeedMenu(false);
+    if (showSpeedMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showSpeedMenu]);
+
   const song = useMemo(() => {
     const customSong = state.customSongs.find(s => s.id === initialSong.id);
     return customSong || initialSong;
@@ -433,8 +443,8 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       const container = scrollContainerRef.current;
       scrollIntervalRef.current = window.setInterval(() => { 
         if (!scrollPauseRef.current) {
-          // Fórmula ajustada para que todas las velocidades sean perceptibles
-          container.scrollTop += (scrollSpeed * 0.1) + 0.1; 
+          // Fórmula ajustada: velocidad 1 = muy lento, velocidad 50 = muy rápido
+          container.scrollTop += (scrollSpeed * 0.03) + 0.05; 
         }
       }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
@@ -743,9 +753,21 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
+        {/* Número de velocidad - ARRIBA del play, solo el número visible */}
+        <button 
+          onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
+          className="text-lg font-bold transition-all hover:scale-110 active:scale-95"
+          style={{ 
+            color: 'white',
+            textShadow: '0 0 10px rgba(0,0,0,0.8)'
+          }}
+        >
+          {scrollSpeed}
+        </button>
+        
         {/* Ventana de control de velocidad */}
         {showSpeedMenu && (
-          <div className="rounded-2xl p-4 mb-2 w-56" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }}>
+          <div className="rounded-2xl p-4 mb-2 w-56" style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}>
             <div className="text-xs text-white/90 mb-3 text-center font-bold">CONTROL DE VELOCIDAD</div>
             
             {/* Velocidad actual */}
@@ -770,33 +792,39 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 <span>Lento</span>
               </div>
             </div>
+            
+            {/* Control de transparencia */}
+            <div className="border-t border-white/20 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-white/80">Botón transparente</span>
+                <button 
+                  onClick={() => setIsButtonTransparent(!isButtonTransparent)}
+                  className="w-12 h-6 rounded-full transition-all relative"
+                  style={{ backgroundColor: isButtonTransparent ? 'rgba(139, 92, 246, 0.8)' : 'rgba(255,255,255,0.2)' }}
+                >
+                  <div 
+                    className="w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all"
+                    style={{ left: isButtonTransparent ? '26px' : '2px' }}
+                  />
+                </button>
+              </div>
+            </div>
           </div>
         )}
         
-        {/* Botón de play/pause - transparente y pequeño */}
+        {/* Botón de play/pause - con control de transparencia */}
         <button 
           onClick={() => setIsAutoScrolling(!isAutoScrolling)}
           className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
           style={{ 
-            backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.4)' : 'rgba(124,58,237,0.4)', 
+            backgroundColor: isButtonTransparent 
+              ? (isAutoScrolling ? 'rgba(239,68,68,0.4)' : 'rgba(124,58,237,0.4)')
+              : (isAutoScrolling ? 'rgba(239,68,68,0.9)' : 'rgba(124,58,237,0.9)'),
             color: 'white', 
-            backdropFilter: 'blur(10px)' 
+            backdropFilter: isButtonTransparent ? 'blur(10px)' : 'none'
           }}
         >
           {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
-        </button>
-        
-        {/* Número de velocidad - solo el número, cliqueable */}
-        <button 
-          onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-          className="text-sm font-bold transition-all hover:scale-110 active:scale-95 px-2 py-1 rounded-lg"
-          style={{ 
-            color: 'white',
-            backgroundColor: 'rgba(0,0,0,0.4)',
-            backdropFilter: 'blur(10px)'
-          }}
-        >
-          {scrollSpeed}
         </button>
       </div>
 
