@@ -100,6 +100,27 @@ function AppContent() {
     input.click();
   }, [showNotification]);
 
+  // Función para limpiar todos los datos de notas personales corruptos
+  const clearCorruptedNotes = useCallback(() => {
+    const keys = Object.keys(localStorage);
+    const noteKeys = keys.filter(key => key.startsWith('song-notes-'));
+    noteKeys.forEach(key => {
+      try {
+        const data = JSON.parse(localStorage.getItem(key) || '{}');
+        const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+                            'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
+        
+        // Si los datos no son válidos, eliminarlos
+        if (!validNotes.includes(data.note2) || !validNotes.includes(data.note3)) {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        localStorage.removeItem(key);
+      }
+    });
+    showNotification('Datos de notas limpiados', 'success');
+  }, [showNotification]);
+
   const handleDeleteHymnal = useCallback((id: string) => {
     // Eliminar las canciones asociadas al himnario
     const songsToRemove = state.customSongs.filter(s => s.hymnalId === id);
@@ -114,7 +135,7 @@ function AppContent() {
 
   if (editingSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onClearCorruptedNotes={clearCorruptedNotes}>
         <SongEditor song={editingSong} onBack={() => setEditingSong(null)} />
       </Layout>
     );
@@ -122,7 +143,7 @@ function AppContent() {
 
   if (selectedSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onClearCorruptedNotes={clearCorruptedNotes}>
         <SongView song={selectedSong} onBack={handleBack} onEdit={() => setEditingSong(selectedSong)} showNotification={showNotification} />
       </Layout>
     );
@@ -148,7 +169,7 @@ function AppContent() {
       notes: '',
     };
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onClearCorruptedNotes={clearCorruptedNotes}>
         <SongEditor song={newSong} onBack={() => setAddingSongToHymnal(null)} />
       </Layout>
     );
@@ -156,7 +177,7 @@ function AppContent() {
 
   if (selectedHymnal) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onClearCorruptedNotes={clearCorruptedNotes}>
         <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onAddSong={(h: Hymnal) => setAddingSongToHymnal(h)} onDeleteHymnal={handleDeleteHymnal} showNotification={showNotification} />
         {showEditHymnalModal && editingHymnal && (
           <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setSelectedHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
@@ -178,7 +199,7 @@ function AppContent() {
   };
 
   return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onClearCorruptedNotes={clearCorruptedNotes}>
       {renderPage()}
       {showEditHymnalModal && editingHymnal && (
         <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
@@ -214,7 +235,7 @@ function AppContent() {
   );
 }
 
-function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport }: any) {
+function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport, onClearCorruptedNotes }: any) {
   const { state, setTheme } = useApp();
   const menuItems = [
     { id: 'home', label: 'Inicio', icon: Home },
@@ -258,6 +279,9 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
               </button>
               <button onClick={() => { onImport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ color: 'var(--text-primary)' }}>
                 <Upload size={20} /><span className="font-medium text-sm">Importar Respaldo</span>
+              </button>
+              <button onClick={() => { onClearCorruptedNotes(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ color: 'var(--text-primary)' }}>
+                <RotateCcw size={20} /><span className="font-medium text-sm">Limpiar Notas Corruptas</span>
               </button>
             </div>
           </nav>
@@ -368,6 +392,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
                           'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
       
+      // Limpiar datos corruptos o traducidos
       const note2 = validNotes.includes(parsed.note2) ? parsed.note2 : '';
       const note3 = validNotes.includes(parsed.note3) ? parsed.note3 : '';
       
