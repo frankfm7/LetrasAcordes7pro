@@ -352,9 +352,9 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   const [showAddToList, setShowAddToList] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(15);
+  const [scrollSpeed, setScrollSpeed] = useState(10);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [isButtonTransparent, setIsButtonTransparent] = useState(true);
+  const [buttonOpacity, setButtonOpacity] = useState(40); // 0-100% de opacidad
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialSong.language.split('/')[0]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
@@ -443,8 +443,8 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       const container = scrollContainerRef.current;
       scrollIntervalRef.current = window.setInterval(() => { 
         if (!scrollPauseRef.current) {
-          // Fórmula ajustada: velocidad 1 = muy lento, velocidad 50 = muy rápido
-          container.scrollTop += (scrollSpeed * 0.03) + 0.05; 
+          // Fórmula: velocidad 1 = muy lento (0.1px), velocidad 70 = rápido (7px)
+          container.scrollTop += scrollSpeed * 0.1; 
         }
       }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
@@ -767,7 +767,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         
         {/* Ventana de control de velocidad */}
         {showSpeedMenu && (
-          <div className="rounded-2xl p-4 mb-2 w-56" style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}>
+          <div className="rounded-2xl p-4 mb-2 w-56" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)' }}>
             <div className="text-xs text-white/90 mb-3 text-center font-bold">CONTROL DE VELOCIDAD</div>
             
             {/* Velocidad actual */}
@@ -781,7 +781,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               <input 
                 type="range" 
                 min="1" 
-                max="50" 
+                max="70" 
                 step="1"
                 value={scrollSpeed} 
                 onChange={e => setScrollSpeed(Number(e.target.value))} 
@@ -789,39 +789,42 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 style={{ opacity: 0.9 }}
               />
               <div className="flex justify-between text-[9px] text-white/50 mt-1">
-                <span>Lento</span>
+                <span>Muy lento</span>
+                <span>Muy rápido</span>
               </div>
             </div>
             
-            {/* Control de transparencia */}
+            {/* Control de opacidad del botón */}
             <div className="border-t border-white/20 pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-white/80">Botón transparente</span>
-                <button 
-                  onClick={() => setIsButtonTransparent(!isButtonTransparent)}
-                  className="w-12 h-6 rounded-full transition-all relative"
-                  style={{ backgroundColor: isButtonTransparent ? 'rgba(139, 92, 246, 0.8)' : 'rgba(255,255,255,0.2)' }}
-                >
-                  <div 
-                    className="w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all"
-                    style={{ left: isButtonTransparent ? '26px' : '2px' }}
-                  />
-                </button>
+              <div className="text-[10px] text-white/60 mb-2">Opacidad del botón</div>
+              <input 
+                type="range" 
+                min="10" 
+                max="100" 
+                step="5"
+                value={buttonOpacity} 
+                onChange={e => setButtonOpacity(Number(e.target.value))} 
+                className="w-full accent-purple-400"
+                style={{ opacity: 0.9 }}
+              />
+              <div className="flex justify-between text-[9px] text-white/50 mt-1">
+                <span>Transparente</span>
+                <span>Opaco</span>
               </div>
             </div>
           </div>
         )}
         
-        {/* Botón de play/pause - con control de transparencia */}
+        {/* Botón de play/pause - con opacidad ajustable */}
         <button 
           onClick={() => setIsAutoScrolling(!isAutoScrolling)}
           className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
           style={{ 
-            backgroundColor: isButtonTransparent 
-              ? (isAutoScrolling ? 'rgba(239,68,68,0.4)' : 'rgba(124,58,237,0.4)')
-              : (isAutoScrolling ? 'rgba(239,68,68,0.9)' : 'rgba(124,58,237,0.9)'),
+            backgroundColor: isAutoScrolling 
+              ? `rgba(239,68,68,${buttonOpacity / 100})`
+              : `rgba(124,58,237,${buttonOpacity / 100})`,
             color: 'white', 
-            backdropFilter: isButtonTransparent ? 'blur(10px)' : 'none'
+            backdropFilter: 'blur(10px)'
           }}
         >
           {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
