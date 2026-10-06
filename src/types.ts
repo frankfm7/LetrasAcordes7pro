@@ -14,8 +14,6 @@ export interface Song {
   lyrics: string;
   notes: string;
   lyricsByLanguage?: Record<string, string>;
-  optionalKey1?: string;
-  optionalKey2?: string;
 }
 
 export interface SongSection {
@@ -45,6 +43,13 @@ export interface Setlist {
   notes: string;
 }
 
+export interface SetlistSong {
+  songId: string;
+  transposition: number;
+  notes: string;
+  order: number;
+}
+
 export interface OrderItem {
   id: string;
   title: string;
@@ -61,13 +66,6 @@ export interface Order {
   items: OrderItem[];
 }
 
-export interface SetlistSong {
-  songId: string;
-  transposition: number;
-  notes: string;
-  order: number;
-}
-
 export interface UserPreferences {
   theme: 'light' | 'dark';
   fontSize: number;
@@ -80,7 +78,7 @@ export interface UserProfile {
   name: string;
   email?: string;
   phone?: string;
-  avatar?: string; // base64 de la imagen
+  avatar?: string;
   createdAt: string;
   updatedAt: string;
 }

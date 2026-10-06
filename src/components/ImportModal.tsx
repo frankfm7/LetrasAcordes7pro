@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { X, Upload, FileText, File, Image, FileJson } from 'lucide-react';
+import { X, Upload, Plus } from 'lucide-react';
 import { Hymnal, Song } from '../types';
 import { importFromTxt, importFromWord, importFromPdf, importFromImage, importFromJson, parseMultipleSongsFromText } from '../utils/importUtils';
 import { useApp } from '../context/AppContext';
 import { useNotification } from './NotificationProvider';
+import AddHymnalModal from './AddHymnalModal';
+import ImageCropper from './ImageCropper';
+import { hymnals as defaultHymnals } from '../data/songs';
 
 interface ImportModalProps {
   onClose: () => void;
@@ -11,17 +14,31 @@ interface ImportModalProps {
 }
 
 export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
-  const { addCustomSong, addMultipleCustomSongs } = useApp();
+  const { addCustomSong, addMultipleCustomSongs, state } = useApp();
   const { showNotification } = useNotification();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previews, setPreviews] = useState<Partial<Song>[]>([]);
   const [selectedHymnalId, setSelectedHymnalId] = useState<string>(hymnals[0]?.id || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAddHymnalModal, setShowAddHymnalModal] = useState(false);
+  const [showImageCropper, setShowImageCropper] = useState(false);
+  const [imageFileToCrop, setImageFileToCrop] = useState<File | null>(null);
+
+  const allHymnals = [...hymnals];
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const fileType = file.name.toLowerCase();
+
+    // Si es una imagen, abrir el cropper
+    if (fileType.match(/\.(jpg|jpeg|png)$/)) {
+      setImageFileToCrop(file);
+      setShowImageCropper(true);
+      return;
+    }
 
     setSelectedFile(file);
     setIsProcessing(true);
@@ -29,7 +46,6 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
     setPreviews([]);
 
     try {
-      const fileType = file.name.toLowerCase();
       let text = '';
 
       if (fileType.endsWith('.txt')) {
@@ -43,13 +59,10 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
         setPreviews([songData]);
         setIsProcessing(false);
         return;
-      } else if (fileType.match(/\.(jpg|jpeg|png)$/)) {
-        text = await importFromImage(file, selectedHymnalId).then(s => s.lyrics || '');
       } else {
         throw new Error('Formato de archivo no soportado');
       }
 
-      // Intentar dividir en múltiples canciones
       const songsData = parseMultipleSongsFromText(text, selectedHymnalId);
       setPreviews(songsData);
     } catch (err) {
@@ -59,12 +72,35 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
     }
   };
 
+  const handleImageCropped = async (croppedImage: File) => {
+    setShowImageCropper(false);
+    setSelectedFile(croppedImage);
+    setIsProcessing(true);
+    setError(null);
+    setPreviews([]);
+
+    try {
+      const text = await importFromImage(croppedImage, selectedHymnalId).then(s => s.lyrics || '');
+      const songsData = parseMultipleSongsFromText(text, selectedHymnalId);
+      setPreviews(songsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al procesar la imagen');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCancelCrop = () => {
+    setShowImageCropper(false);
+    setImageFileToCrop(null);
+  };
+
   const handleImport = () => {
     if (previews.length === 0 || !selectedFile) return;
 
     try {
       const newSongs: Song[] = previews.map((preview, index) => ({
-        id: `custom-${Date.now()}-${index}`,
+        id: `custom-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
         title: preview.title || 'Sin título',
         artist: preview.artist || 'Desconocido',
         code: `IMP${Date.now()}-${index}`,
@@ -100,33 +136,41 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold">Importar canción</h3>
+          <h3 className="text-xl font-bold">Importar canciones</h3>
           <button onClick={onClose} className="p-2 rounded-lg hover:opacity-70" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
             <X size={20} />
           </button>
         </div>
 
         <div className="space-y-4">
-          {/* Selector de cancionero */}
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
               Importar a cancionero
             </label>
-            <select
-              value={selectedHymnalId}
-              onChange={(e) => setSelectedHymnalId(e.target.value)}
-              className="w-full p-3 rounded-xl border text-sm"
-              style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-            >
-              {hymnals.map(hymnal => (
-                <option key={hymnal.id} value={hymnal.id}>
-                  {hymnal.icon} {hymnal.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={selectedHymnalId}
+                onChange={(e) => setSelectedHymnalId(e.target.value)}
+                className="flex-1 p-3 rounded-xl border text-sm"
+                style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+              >
+                {allHymnals.map(hymnal => (
+                  <option key={hymnal.id} value={hymnal.id}>
+                    {hymnal.icon} {hymnal.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => setShowAddHymnalModal(true)}
+                className="px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2"
+                style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+              >
+                <Plus size={16} />
+                <span className="hidden sm:inline">Nuevo</span>
+              </button>
+            </div>
           </div>
 
-          {/* Selector de archivo */}
           <div>
             <label className="cursor-pointer">
               <input
@@ -145,7 +189,6 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
             </label>
           </div>
 
-          {/* Estado de procesamiento */}
           {isProcessing && (
             <div className="text-center py-4">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--accent)' }}></div>
@@ -153,14 +196,12 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
             </div>
           )}
 
-          {/* Error */}
           {error && (
             <div className="p-4 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
               <p className="text-sm text-red-500">{error}</p>
             </div>
           )}
 
-          {/* Preview */}
           {previews.length > 0 && !isProcessing && (
             <div className="space-y-3">
               <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--accent-light)', border: '1px solid var(--accent)' }}>
@@ -208,6 +249,18 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
           Cancelar
         </button>
       </div>
+
+      {showAddHymnalModal && (
+        <AddHymnalModal onClose={() => setShowAddHymnalModal(false)} />
+      )}
+
+      {showImageCropper && imageFileToCrop && (
+        <ImageCropper
+          imageFile={imageFileToCrop}
+          onCropComplete={handleImageCropped}
+          onCancel={handleCancelCrop}
+        />
+      )}
     </div>
   );
 }

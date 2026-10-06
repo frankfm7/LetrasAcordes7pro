@@ -65,7 +65,6 @@ export default function MultiSongSelector({ songs, onClose }: MultiSongSelectorP
           </button>
         </div>
 
-        {/* Buscador */}
         <div className="relative mb-4">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
           <input
@@ -79,7 +78,6 @@ export default function MultiSongSelector({ songs, onClose }: MultiSongSelectorP
           />
         </div>
 
-        {/* Lista de canciones */}
         <div className="space-y-2 mb-4">
           {filteredSongs.map(song => {
             const isSelected = selectedSongs.includes(song.id);
@@ -112,7 +110,6 @@ export default function MultiSongSelector({ songs, onClose }: MultiSongSelectorP
           )}
         </div>
 
-        {/* Botón de exportar */}
         {selectedSongs.length > 0 && (
           <button
             onClick={() => setShowExport(true)}

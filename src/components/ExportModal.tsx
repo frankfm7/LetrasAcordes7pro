@@ -6,7 +6,7 @@ import { useNotification } from './NotificationProvider';
 interface ExportModalProps {
   songs: Song[];
   onClose: () => void;
-  songElementId?: string; // Para captura de imagen
+  songElementId?: string;
 }
 
 export default function ExportModal({ songs, onClose, songElementId }: ExportModalProps) {

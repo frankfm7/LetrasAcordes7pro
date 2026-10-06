@@ -22,7 +22,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
   const [editAvatar, setEditAvatar] = useState<string | undefined>();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // Cargar perfil al montar el componente
   useEffect(() => {
     const loadedProfile = loadUserProfile();
     setProfile(loadedProfile);
@@ -36,15 +35,13 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     }
   }, []);
 
-  const totalSongs = state.customSongs.length + 10; // Asumiendo 10 canciones predeterminadas
-  const totalHymnals = state.customHymnals.length + 1; // Asumiendo 1 cancionero predeterminado
+  const totalSongs = state.customSongs.length + 2;
+  const totalHymnals = state.customHymnals.length + 1;
 
-  // Manejar cambio de imagen
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
       showNotification('La imagen es muy grande. Máximo 5MB', 'error');
       return;
@@ -58,9 +55,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     }
   };
 
-  // Guardar cambios
   const handleSave = () => {
-    // Validaciones
     if (!editName.trim() || editName.trim().length < 2) {
       showNotification('El nombre debe tener al menos 2 caracteres', 'error');
       return;
@@ -92,7 +87,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
     }
   };
 
-  // Cancelar cambios
   const handleCancel = () => {
     if (profile) {
       setEditName(profile.name || '');
@@ -110,7 +104,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
 
   return (
     <div className="max-w-3xl mx-auto pb-20">
-      {/* Header con botón de volver y botón de login */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
@@ -128,9 +121,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         </button>
       </div>
 
-      {/* Tarjeta de perfil editable */}
       <div className="rounded-2xl p-6 mb-6 card-shadow-md" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-        {/* Foto de perfil */}
         <div className="flex items-center gap-4 mb-6">
           <div className="relative">
             <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'var(--accent-light)' }}>
@@ -166,9 +157,7 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           </div>
         </div>
 
-        {/* Campos editables */}
         <div className="space-y-4">
-          {/* Nombre */}
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
               Nombre *
@@ -184,7 +173,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             />
           </div>
 
-          {/* Email */}
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
               <Mail size={14} />
@@ -204,7 +192,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             </div>
           </div>
 
-          {/* Teléfono */}
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
               <Phone size={14} />
@@ -224,7 +211,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
             </div>
           </div>
 
-          {/* Miembro desde */}
           {profile?.createdAt && (
             <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <Calendar size={18} style={{ color: 'var(--text-muted)' }} />
@@ -238,7 +224,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
           )}
         </div>
 
-        {/* Botones de acción */}
         <div className="flex gap-3 mt-6">
           <button
             onClick={handleCancel}
@@ -257,7 +242,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         </div>
       </div>
 
-      {/* Estadísticas */}
       <div className="rounded-2xl p-6 mb-6 card-shadow-md" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
         <h3 className="text-lg font-bold mb-4">Mis Estadísticas</h3>
         
@@ -288,7 +272,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         </div>
       </div>
 
-      {/* Información de la app */}
       <div className="rounded-2xl p-6 card-shadow-md" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
         <h3 className="text-lg font-bold mb-4">Acerca de Cancionero7Pro</h3>
         
@@ -300,7 +283,6 @@ export default function ProfilePage({ onBack }: ProfilePageProps) {
         </div>
       </div>
 
-      {/* Modal de Login */}
       {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
     </div>
   );

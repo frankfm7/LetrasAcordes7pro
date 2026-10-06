@@ -36,7 +36,6 @@ export default function HymnalSelector({ hymnals, songs, onClose }: HymnalSelect
           <h3 className="text-xl font-bold">Seleccionar cancionero</h3>
         </div>
 
-        {/* Lista de cancioneros */}
         <div className="space-y-2">
           {hymnals.map(hymnal => {
             const hymnalSongs = songs.filter(s => s.hymnalId === hymnal.id);

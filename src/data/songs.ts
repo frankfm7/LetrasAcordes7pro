@@ -10,7 +10,6 @@ export const hymnals: Hymnal[] = [
     color: '#f97316',
     isCustom: true,
     codePrefix: 'M',
-    image: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&q=80',
   },
 ];
 
@@ -26,65 +25,46 @@ export const songs: Song[] = [
     timeSignature: '4/4',
     bpm: 68,
     language: 'Castellano',
-    categories: ['Adoración', 'Consagración'],
+    categories: ['Adoración'],
     sections: [],
     lyrics: `VERSO 1
 //D                A
 Renuévame, Señor Jesús
 //Bm             F#m
 Ya no quiero ser igual
-//G              A
-Renuévame, Señor Jesús
-//D              A
-Pon en mí tu corazón
 
 CORO
 //G              D
 Porque todo lo que hay dentro de mí
 //A              Bm
-necesita ser cambiado, Señor
-//G              D
-Porque todo lo que hay dentro de mí
-//A              D
-necesita más de Ti`,
-    notes: 'Canción de adoración y consagración',
+necesita ser cambiado, Señor`,
+    notes: 'Canción de adoración',
   },
   {
     id: 'm2',
-    title: 'Jach\'a Apu Dios / Gran Dios Padre',
-    artist: 'Himnario Cala',
+    title: 'Jach\'a Apu Dios',
+    artist: 'Tradicional Andina',
     code: 'M2',
     number: 2,
     hymnalId: 'mis-canciones',
     key: 'Am',
     timeSignature: '4/4',
     bpm: 80,
-    language: 'Aymara/Castellano',
-    categories: ['Himno', 'Adoración'],
+    language: 'Castellano/Aymara',
+    categories: ['Himno', 'Bilingüe'],
     sections: [],
     lyrics: `VERSO 1
 //Am             Em
-Jach'a Apu Dios, jiwasan Tatana
+Gran Dios Padre, nuestro Creador
 //Am             Em
-Jach'a Apu Dios, jiwasan Mamana
+Gran Dios Padre, nuestra Madre
 
 CORO
 //F              Am
-Jilïri Apunakana
+Príncipe de los dioses
 //F              Am
-Wali ch'ama Apunakana`,
+Muy poderoso dios`,
     lyricsByLanguage: {
-      'Aymara': `VERSO 1
-//Am             Em
-Jach'a Apu Dios, jiwasan Tatana
-//Am             Em
-Jach'a Apu Dios, jiwasan Mamana
-
-CORO
-//F              Am
-Jilïri Apunakana
-//F              Am
-Wali ch'ama Apunakana`,
       'Castellano': `VERSO 1
 //Am             Em
 Gran Dios Padre, nuestro Creador
@@ -96,8 +76,19 @@ CORO
 Príncipe de los dioses
 //F              Am
 Muy poderoso dios`,
+      'Aymara': `VERSO 1
+//Am             Em
+Jach'a Apu Dios, jiwasan Tatana
+//Am             Em
+Jach'a Apu Dios, jiwasan Mamana
+
+CORO
+//F              Am
+Jilïri Apunakana
+//F              Am
+Wali ch'ama Apunakana`
     },
-    notes: 'Canción bilingüe Aymara/Castellano',
+    notes: 'Himno bilingüe Castellano/Aymara',
   },
 ];
 
@@ -106,17 +97,10 @@ export function generateSongCode(hymnal: Hymnal, number: number): string {
   return `${prefix}${number}`;
 }
 
-export function extractNumberFromCode(code: string): number {
-  const match = code.match(/\d+$/);
-  return match ? parseInt(match[0], 10) : 0;
-}
-
 export function getNextSongNumber(hymnalId: string, songsList: Song[]): number {
   const hymnalSongs = songsList.filter(s => s.hymnalId === hymnalId);
   if (hymnalSongs.length === 0) return 1;
-  const numbers = hymnalSongs
-    .map(s => s.number || extractNumberFromCode(s.code))
-    .filter(n => !isNaN(n));
+  const numbers = hymnalSongs.map(s => s.number || 0).filter(n => !isNaN(n));
   if (numbers.length === 0) return 1;
   return Math.max(...numbers) + 1;
 }

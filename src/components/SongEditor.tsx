@@ -1,29 +1,37 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { ChevronLeft, Save, Trash2, Plus, X } from 'lucide-react';
 import { Song } from '../types';
 import { useApp } from '../context/AppContext';
 import { useNotification } from './NotificationProvider';
 import { hymnals } from '../data/songs';
 import { transposeLyrics } from '../utils/chords';
-import { ChevronLeft, Save, Trash2, Plus, X } from 'lucide-react';
 
-export default function SongEditor({ song, onBack }: { song: Song; onBack: () => void }) {
+interface SongEditorProps {
+  song: Song;
+  onBack: () => void;
+}
+
+export default function SongEditor({ song, onBack }: SongEditorProps) {
   const { state, updateCustomSong, removeCustomSong } = useApp();
   const { showNotification } = useNotification();
-  const isNewSong = song.id.startsWith('new-');
+  
   const [title, setTitle] = useState(song.title);
   const [artist, setArtist] = useState(song.artist);
   const [key, setKey] = useState(song.key);
   const [timeSignature, setTimeSignature] = useState(song.timeSignature);
   const [bpm, setBpm] = useState(song.bpm);
-  const [language, setLanguage] = useState(song.language);
+  const [language, setLanguage] = useState(song.language.split('/')[0]);
   const [categories, setCategories] = useState<string[]>(song.categories);
-  const [newCategory, setNewCategory] = useState('');
   const [lyrics, setLyrics] = useState(song.lyrics);
   const [lyricsByLanguage, setLyricsByLanguage] = useState<Record<string, string>>(song.lyricsByLanguage || {});
-  const [activeLanguageTab, setActiveLanguageTab] = useState(language);
+  const [activeLanguageTab, setActiveLanguageTab] = useState<string>(song.language.split('/')[0]);
   const [notes, setNotes] = useState(song.notes);
   const [hymnalId, setHymnalId] = useState(song.hymnalId);
-  const [originalKey] = useState(song.key);
+  const [showAddLanguageModal, setShowAddLanguageModal] = useState(false);
+  const [newLanguageName, setNewLanguageName] = useState('');
+
+  const originalKey = song.key;
+  const allLanguages = [language, ...Object.keys(lyricsByLanguage).filter(l => l !== language)];
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -34,6 +42,19 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
     let finalLyrics = lyrics;
     const finalLyricsByLanguage = { ...lyricsByLanguage };
 
+    // Siempre guardar la letra actual en el idioma activo
+    finalLyricsByLanguage[activeLanguageTab] = lyrics;
+    
+    // Asegurar que el idioma principal esté en lyricsByLanguage
+    if (!finalLyricsByLanguage[language]) {
+      finalLyricsByLanguage[language] = lyrics;
+    }
+    
+    // Si hay múltiples idiomas, usar la letra del idioma principal como principal
+    if (Object.keys(finalLyricsByLanguage).length > 1) {
+      finalLyrics = finalLyricsByLanguage[language] || lyrics;
+    }
+
     if (key !== originalKey) {
       const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       const originalBase = originalKey.replace(/m$/, '');
@@ -43,15 +64,15 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
 
       if (originalIndex !== -1 && newIndex !== -1) {
         const semitones = newIndex - originalIndex;
-        finalLyrics = transposeLyrics(lyrics, semitones);
+        finalLyrics = transposeLyrics(finalLyrics, semitones);
         Object.keys(finalLyricsByLanguage).forEach(lang => {
           finalLyricsByLanguage[lang] = transposeLyrics(finalLyricsByLanguage[lang], semitones);
         });
       }
     }
 
-    const allLanguages = [language, ...Object.keys(finalLyricsByLanguage).filter(l => l !== language)];
-    const languageString = allLanguages.length > 1 ? allLanguages.join('/') : language;
+    const allLanguagesFinal = [language, ...Object.keys(finalLyricsByLanguage).filter(l => l !== language)];
+    const languageString = allLanguagesFinal.length > 1 ? allLanguagesFinal.join('/') : language;
 
     const updatedSong: Song = {
       ...song,
@@ -72,6 +93,84 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
     onBack();
   };
 
+  const handleAddLanguage = () => {
+    if (!newLanguageName.trim()) {
+      showNotification('El nombre del idioma es obligatorio', 'error');
+      return;
+    }
+    if (allLanguages.includes(newLanguageName.trim())) {
+      showNotification('Este idioma ya existe', 'error');
+      return;
+    }
+    
+    const updatedLyricsByLanguage = { ...lyricsByLanguage };
+    // Guardar la letra actual en el idioma activo
+    updatedLyricsByLanguage[activeLanguageTab] = lyrics;
+    // Asegurar que el idioma principal también esté guardado
+    if (!updatedLyricsByLanguage[language]) {
+      updatedLyricsByLanguage[language] = lyrics;
+    }
+    // Agregar el nuevo idioma con letra vacía
+    updatedLyricsByLanguage[newLanguageName.trim()] = '';
+    
+    setLyricsByLanguage(updatedLyricsByLanguage);
+    setActiveLanguageTab(newLanguageName.trim());
+    setLyrics('');
+    setNewLanguageName('');
+    setShowAddLanguageModal(false);
+    showNotification('Idioma agregado', 'success');
+  };
+
+  const handleAddLanguageWithPreset = (presetLang: string) => {
+    if (allLanguages.includes(presetLang)) {
+      showNotification('Este idioma ya existe', 'error');
+      return;
+    }
+    
+    const updatedLyricsByLanguage = { ...lyricsByLanguage };
+    // Guardar la letra actual en el idioma activo
+    updatedLyricsByLanguage[activeLanguageTab] = lyrics;
+    // Asegurar que el idioma principal también esté guardado
+    if (!updatedLyricsByLanguage[language]) {
+      updatedLyricsByLanguage[language] = lyrics;
+    }
+    // Agregar el nuevo idioma con letra vacía
+    updatedLyricsByLanguage[presetLang] = '';
+    
+    setLyricsByLanguage(updatedLyricsByLanguage);
+    setActiveLanguageTab(presetLang);
+    setLyrics('');
+    setNewLanguageName('');
+    setShowAddLanguageModal(false);
+    showNotification(`Idioma ${presetLang} agregado`, 'success');
+  };
+
+  const handleLanguageTabChange = (lang: string) => {
+    // Guardar la letra actual antes de cambiar
+    const updatedLyricsByLanguage = { ...lyricsByLanguage };
+    updatedLyricsByLanguage[activeLanguageTab] = lyrics;
+    setLyricsByLanguage(updatedLyricsByLanguage);
+    
+    // Cambiar al nuevo idioma
+    setActiveLanguageTab(lang);
+    setLyrics(updatedLyricsByLanguage[lang] || '');
+  };
+
+  const handleRemoveLanguage = (lang: string) => {
+    if (lang === language) {
+      showNotification('No puedes eliminar el idioma principal', 'error');
+      return;
+    }
+    if (confirm(`¿Eliminar el idioma "${lang}"?`)) {
+      const updatedLyricsByLanguage = { ...lyricsByLanguage };
+      delete updatedLyricsByLanguage[lang];
+      setLyricsByLanguage(updatedLyricsByLanguage);
+      setActiveLanguageTab(language);
+      setLyrics(updatedLyricsByLanguage[language] || lyrics);
+      showNotification('Idioma eliminado', 'success');
+    }
+  };
+
   const handleDelete = () => {
     if (confirm(`¿Estás seguro de eliminar "${title}"? Esta acción no se puede deshacer.`)) {
       removeCustomSong(song.id);
@@ -80,54 +179,10 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
     }
   };
 
-  const addCategory = () => {
-    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      setCategories([...categories, newCategory.trim()]);
-      setNewCategory('');
-    }
-  };
-
-  const removeCategory = (cat: string) => {
-    setCategories(categories.filter(c => c !== cat));
-  };
-
-  const addLanguage = () => {
-    const newLang = prompt('Ingresa el nombre del nuevo idioma:');
-    if (newLang && newLang.trim()) {
-      const trimmedLang = newLang.trim();
-      if (!lyricsByLanguage[trimmedLang]) {
-        setLyricsByLanguage({ ...lyricsByLanguage, [trimmedLang]: '' });
-      }
-    }
-  };
-
-  const removeLanguage = (lang: string) => {
-    if (lang === language) {
-      alert('No puedes eliminar el idioma principal');
-      return;
-    }
-    const newLyricsByLanguage = { ...lyricsByLanguage };
-    delete newLyricsByLanguage[lang];
-    setLyricsByLanguage(newLyricsByLanguage);
-    if (activeLanguageTab === lang) {
-      setActiveLanguageTab(language);
-    }
-  };
-
-  const handleLyricsChange = (lang: string, value: string) => {
-    if (lang === language) {
-      setLyrics(value);
-    } else {
-      setLyricsByLanguage({ ...lyricsByLanguage, [lang]: value });
-    }
-  };
-
-  const getCurrentLyrics = () => {
-    if (activeLanguageTab === language) {
-      return lyrics;
-    }
-    return lyricsByLanguage[activeLanguageTab] || '';
-  };
+  // Combinar himnarios evitando duplicados
+  const customIds = new Set(state.customHymnals.map(h => h.id));
+  const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+  const allHymnals = [...defaultNotEdited, ...state.customHymnals];
 
   return (
     <div className="max-w-3xl mx-auto pb-20">
@@ -136,9 +191,12 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
           <ChevronLeft size={20} />
         </button>
         <div className="flex-1">
-          <h2 className="text-xl font-bold">{isNewSong ? 'Nueva Canción' : 'Editar Canción'}</h2>
+          <h2 className="text-xl font-bold">Editar Canción</h2>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{song.code}</p>
         </div>
+        <button onClick={handleDelete} className="p-2 rounded-xl text-red-500" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+          <Trash2 size={20} />
+        </button>
       </div>
 
       <div className="space-y-4">
@@ -183,96 +241,97 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
           <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Cancionero</label>
           <select value={hymnalId} onChange={e => setHymnalId(e.target.value)}
                   className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}>
-            {(() => {
-              const customIds = new Set(state.customHymnals.map(h => h.id));
-              const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
-              return [...defaultNotEdited, ...state.customHymnals].map(h => (
-                <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
-              ));
-            })()}
+            {allHymnals.map(h => (
+              <option key={h.id} value={h.id}>{h.icon} {h.name}</option>
+            ))}
           </select>
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Idioma Principal</label>
-            <button onClick={addLanguage} className="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
-              <Plus size={14} /> Agregar idioma
+          <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Idioma Principal</label>
+          <div className="flex gap-2">
+            <select 
+              value={language} 
+              onChange={e => setLanguage(e.target.value)}
+              className="flex-1 p-3 rounded-xl border text-sm" 
+              style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+            >
+              <option value="Castellano">Castellano</option>
+              <option value="Aymara">Aymara</option>
+              <option value="Quechua">Quechua</option>
+              <option value="Inglés">Inglés</option>
+              <option value="Otro">Otro (especificar abajo)</option>
+            </select>
+            <button
+              onClick={() => setShowAddLanguageModal(true)}
+              className="px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2"
+              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">Agregar idioma</span>
             </button>
           </div>
-          <input type="text" value={language} onChange={e => setLanguage(e.target.value)}
-                 className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
-        </div>
-
-        <div>
-          <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Categorías</label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {categories.map(cat => (
-              <span key={cat} className="px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-                {cat}
-                <button onClick={() => removeCategory(cat)} className="hover:opacity-70">×</button>
-              </span>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input type="text" value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="Nueva categoría"
-                   className="flex-1 p-2 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-                   onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCategory())} />
-            <button onClick={addCategory} className="px-3 py-2 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Agregar</button>
-          </div>
+          {language === 'Otro' && (
+            <input 
+              type="text" 
+              placeholder="Especificar idioma..."
+              className="w-full p-3 rounded-xl border text-sm mt-2" 
+              style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+              onBlur={e => {
+                if (e.target.value.trim()) {
+                  setLanguage(e.target.value.trim());
+                }
+              }}
+            />
+          )}
         </div>
 
         <div>
           <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Letra y Acordes</label>
-
-          <div className="flex flex-wrap gap-2 mb-3">
-            <button
-              onClick={() => setActiveLanguageTab(language)}
-              className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
-              style={{
-                backgroundColor: activeLanguageTab === language ? 'var(--accent)' : 'var(--bg-tertiary)',
-                color: activeLanguageTab === language ? 'white' : 'var(--text-primary)',
-              }}
-            >
-              {language} (Principal)
-            </button>
-
-            {Object.keys(lyricsByLanguage).map(lang => (
-              <button
-                key={lang}
-                onClick={() => setActiveLanguageTab(lang)}
-                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
-                style={{
-                  backgroundColor: activeLanguageTab === lang ? 'var(--accent)' : 'var(--bg-tertiary)',
-                  color: activeLanguageTab === lang ? 'white' : 'var(--text-primary)',
-                }}
-              >
-                {lang}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeLanguage(lang);
-                  }}
-                  className="hover:opacity-70"
-                >
-                  <X size={14} />
-                </button>
-              </button>
-            ))}
-          </div>
-
+          
+          {/* Pestañas de idiomas si hay múltiples */}
+          {allLanguages.length > 1 && (
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {allLanguages.map(lang => (
+                <div key={lang} className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleLanguageTabChange(lang)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                    style={{
+                      backgroundColor: activeLanguageTab === lang ? 'var(--accent)' : 'var(--bg-tertiary)',
+                      color: activeLanguageTab === lang ? 'white' : 'var(--text-primary)',
+                      border: activeLanguageTab === lang ? '2px solid var(--accent)' : '2px solid transparent'
+                    }}
+                  >
+                    {lang}
+                  </button>
+                  {lang !== language && (
+                    <button
+                      onClick={() => handleRemoveLanguage(lang)}
+                      className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20"
+                      title="Eliminar idioma"
+                    >
+                      <X size={12} className="text-red-500" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
           <textarea
-            value={getCurrentLyrics()}
-            onChange={e => handleLyricsChange(activeLanguageTab, e.target.value)}
+            value={lyrics}
+            onChange={e => setLyrics(e.target.value)}
             rows={15}
             className="w-full p-3 rounded-xl border text-sm font-mono"
             style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-            placeholder={`Escribe la letra y acordes en ${activeLanguageTab}...`}
+            placeholder={`VERSO 1\n//G            Em          C          D\nLetra de la canción\n//G            Em          C          D\ncon acordes arriba`}
           />
-
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-            💡 Editando: <strong>{activeLanguageTab}</strong> {activeLanguageTab === language && '(Idioma principal)'}
-          </p>
+          {allLanguages.length > 1 && (
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Editando: <strong>{activeLanguageTab}</strong> {activeLanguageTab === language && '(Idioma principal)'}
+            </p>
+          )}
         </div>
 
         <div>
@@ -282,9 +341,86 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
         </div>
 
         <button onClick={handleSave} disabled={!title.trim()} className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
-          <Save size={16} /> {isNewSong ? 'Crear Canción' : 'Guardar Cambios'}
+          <Save size={16} /> Guardar Cambios
         </button>
       </div>
+
+      {/* Modal para agregar nuevo idioma */}
+      {showAddLanguageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddLanguageModal(false)}>
+          <div className="w-full max-w-md rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Agregar Idioma</h3>
+            
+            {/* Idiomas predefinidos comunes */}
+            <div>
+              <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Idiomas comunes</label>
+              <div className="flex flex-wrap gap-2">
+                {['Aymara', 'Quechua', 'Inglés', 'Portugués', 'Francés', 'Italiano', 'Alemán'].map(lang => {
+                  const isAlreadyAdded = allLanguages.includes(lang);
+                  return (
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        if (!isAlreadyAdded) {
+                          setNewLanguageName(lang);
+                          setTimeout(() => {
+                            handleAddLanguageWithPreset(lang);
+                          }, 0);
+                        }
+                      }}
+                      disabled={isAlreadyAdded}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                      style={{
+                        backgroundColor: isAlreadyAdded ? 'var(--bg-tertiary)' : 'var(--accent-light)',
+                        color: isAlreadyAdded ? 'var(--text-muted)' : 'var(--accent)',
+                        border: '2px solid var(--border-color)',
+                        opacity: isAlreadyAdded ? 0.5 : 1,
+                        cursor: isAlreadyAdded ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {isAlreadyAdded ? `${lang} ✓` : lang}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Opción de idioma personalizado */}
+            <div>
+              <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>O escribe un idioma personalizado</label>
+              <input
+                type="text"
+                value={newLanguageName}
+                onChange={e => setNewLanguageName(e.target.value)}
+                placeholder="Ej: Guaraní, Mapudungun, etc."
+                className="w-full p-3 rounded-xl border text-sm"
+                style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowAddLanguageModal(false);
+                  setNewLanguageName('');
+                }}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold"
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddLanguage}
+                disabled={!newLanguageName.trim()}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -40,7 +40,6 @@ export default function SongSelectorModal({ songs, onClose }: SongSelectorModalP
           <h3 className="text-xl font-bold">Seleccionar canción</h3>
         </div>
 
-        {/* Buscador */}
         <div className="relative mb-4">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
           <input
@@ -54,7 +53,6 @@ export default function SongSelectorModal({ songs, onClose }: SongSelectorModalP
           />
         </div>
 
-        {/* Lista de canciones */}
         <div className="space-y-2">
           {filteredSongs.map(song => (
             <button
