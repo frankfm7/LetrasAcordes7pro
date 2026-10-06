@@ -438,19 +438,24 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     return sectionList;
   }, [transposedLyrics]);
 
-  // Mapa de velocidad a milisegundos
-  const SPEED_TO_MS: Record<number, number> = {
-    1: 120,
-    2: 80,
-    3: 50,
-    4: 30,
-    5: 15,
+  // Función de conversión de velocidad a milisegundos
+  const getSpeedMs = (velocidad: number): number => {
+    if (velocidad <= 10) {
+      // Del 1 al 10 valores fijos (ya funciona bien)
+      const valores: Record<number, number> = {
+        1: 120, 2: 100, 3: 85, 4: 70, 5: 60,
+        6: 52, 7: 45, 8: 38, 9: 32, 10: 25
+      };
+      return valores[velocidad] || 25;
+    }
+    // Del 10 al 70 usar fórmula exponencial
+    return Math.max(3, Math.round(25 * Math.pow(0.93, velocidad - 10)));
   };
 
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      const ms = SPEED_TO_MS[scrollSpeed] || 50;
+      const ms = getSpeedMs(scrollSpeed);
       
       scrollIntervalRef.current = window.setInterval(() => { 
         if (!scrollPauseRef.current) {
