@@ -438,17 +438,36 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     return sectionList;
   }, [transposedLyrics]);
 
+  // Mapa de velocidad a milisegundos
+  const SPEED_TO_MS: Record<number, number> = {
+    1: 120,
+    2: 80,
+    3: 50,
+    4: 30,
+    5: 15,
+  };
+
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
+      const ms = SPEED_TO_MS[scrollSpeed] || 50;
+      
       scrollIntervalRef.current = window.setInterval(() => { 
         if (!scrollPauseRef.current) {
-          // Fórmula: velocidad 1 = muy lento (0.1px), velocidad 70 = rápido (7px)
-          container.scrollTop += scrollSpeed * 0.1; 
+          container.scrollTop += 1;
         }
-      }, 50);
-    } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
-    return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
+      }, ms);
+    } else { 
+      if (scrollIntervalRef.current) { 
+        clearInterval(scrollIntervalRef.current); 
+        scrollIntervalRef.current = null; 
+      } 
+    }
+    return () => { 
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+    };
   }, [isAutoScrolling, scrollSpeed]);
 
   const scrollToSection = (sectionId: string) => {
