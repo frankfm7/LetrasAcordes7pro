@@ -12,6 +12,7 @@ import Tuner from './Tuner';
 import SongEditor from './SongEditor';
 import AddHymnalModal from './AddHymnalModal';
 import EditHymnalModal from './EditHymnalModal';
+import ExportModal from './ExportModal';
 
 export default function App() {
   return (
@@ -388,6 +389,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   });
   const [editingNote, setEditingNote] = useState<'note2' | 'note3' | null>(null);
   const [showOriginalNote, setShowOriginalNote] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Cerrar menú de acciones al hacer clic fuera
   useEffect(() => {
@@ -682,7 +684,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
                 <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
                 <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
-                <button onClick={() => { showNotification('Importar canción (próximamente)', 'info'); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
+                <button onClick={() => { setShowExportModal(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
                 <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
               </div>
             )}
@@ -858,6 +860,10 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
         </button>
       </div>
+
+      {showExportModal && (
+        <ExportModal songs={[song]} onClose={() => setShowExportModal(false)} />
+      )}
 
       {showAddToList && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddToList(false)}>
