@@ -234,55 +234,44 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
             </div>
           </div>
 
-          {/* Vista Previa */}
+          {/* Vista Previa con Imagen */}
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Vista Previa</label>
-            <div className="rounded-xl p-5 relative overflow-hidden" style={{
-              background: coverImage
-                ? `linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(${coverImage}) center/cover`
-                : `linear-gradient(135deg, ${color}, ${color}cc)`,
-              boxShadow: `0 8px 24px ${color}44`,
-              aspectRatio: '3/4',
-              maxWidth: '200px',
-            }}>
-              <div className="text-5xl mb-3">{icon}</div>
-              <div className="text-white font-bold text-lg leading-tight mb-1" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>{name || 'Nombre del cancionero'}</div>
-              <div className="text-white/80 text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{selectedLanguages.join('/')}</div>
-              {coverImage && (
-                <button onClick={() => setCoverImage(null)} className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70">
-                  <Trash2 size={12} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Agregar Imagen */}
-          <div>
-            <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Imagen de Portada (Opcional)</label>
-            {coverImage ? (
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-lg overflow-hidden">
-                  <img src={coverImage} alt="Preview" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Imagen cargada</p>
-                  <button onClick={() => setCoverImage(null)} className="text-xs text-red-500 font-semibold mt-1">Eliminar imagen</button>
-                </div>
-                <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  Cambiar
-                </label>
+            <div className="flex gap-4">
+              <div className="rounded-xl p-5 relative overflow-hidden flex-shrink-0" style={{
+                background: coverImage
+                  ? `linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(${coverImage}) center/cover`
+                  : `linear-gradient(135deg, ${color}, ${color}cc)`,
+                boxShadow: `0 8px 24px ${color}44`,
+                aspectRatio: '3/4',
+                width: '150px',
+              }}>
+                <div className="text-4xl mb-2">{icon}</div>
+                <div className="text-white font-bold text-base leading-tight mb-1" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>{name || 'Nombre del cancionero'}</div>
+                <div className="text-white/80 text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{selectedLanguages.join('/')}</div>
               </div>
-            ) : (
-              <label className="cursor-pointer">
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                <div className="rounded-xl border-2 border-dashed p-4 text-center transition-all hover:border-opacity-70" style={{ borderColor: 'var(--border-color)' }}>
-                  <Image size={24} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-                  <p className="text-xs font-medium">Click para subir imagen</p>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Se usará como fondo del cancionero</p>
-                </div>
-              </label>
-            )}
+              <div className="flex-1 flex flex-col justify-center gap-2">
+                {coverImage ? (
+                  <>
+                    <button onClick={() => setCoverImage(null)} className="px-3 py-2 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                      🗑️ Eliminar imagen
+                    </button>
+                    <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer text-center" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      📷 Cambiar imagen
+                    </label>
+                  </>
+                ) : (
+                  <label className="cursor-pointer">
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    <div className="rounded-xl border-2 border-dashed p-4 text-center transition-all hover:border-opacity-70" style={{ borderColor: 'var(--border-color)' }}>
+                      <Image size={20} className="mx-auto mb-1" style={{ color: 'var(--text-muted)' }} />
+                      <p className="text-xs font-medium">Subir imagen de portada</p>
+                    </div>
+                  </label>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Botones */}

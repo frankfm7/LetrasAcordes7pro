@@ -974,9 +974,6 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
               }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
                 <Download size={14} /> Exportar
               </button>
-              <button onClick={() => showNotification('Capturar imagen (próximamente)', 'info')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
-                <Camera size={14} /> Capturar imagen
-              </button>
               <button onClick={() => {
                 const shareText = `Cancionero: ${hymnal.name}\n${hymnalSongs.length} canciones\n\n${hymnalSongs.map(s => `- ${s.title}`).join('\n')}`;
                 if (navigator.share) {
