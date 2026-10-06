@@ -1,17 +1,18 @@
-import { X, FileText, FileJson, FileCode, Image, Share2 } from 'lucide-react';
+import { X, FileText, FileJson, File, Image, FileDown } from 'lucide-react';
 import { Song } from '../types';
-import { exportAsTxt, exportAsJson, exportAsHtml } from '../utils/exportUtils';
+import { exportAsTxt, exportAsJson, exportAsWord, exportAsPdf, exportAsImage } from '../utils/exportUtils';
 import { useNotification } from './NotificationProvider';
 
 interface ExportModalProps {
   songs: Song[];
   onClose: () => void;
+  songElementId?: string; // Para captura de imagen
 }
 
-export default function ExportModal({ songs, onClose }: ExportModalProps) {
+export default function ExportModal({ songs, onClose, songElementId }: ExportModalProps) {
   const { showNotification } = useNotification();
 
-  const handleExport = (format: string) => {
+  const handleExport = async (format: string) => {
     try {
       switch (format) {
         case 'txt':
@@ -22,13 +23,23 @@ export default function ExportModal({ songs, onClose }: ExportModalProps) {
           exportAsJson(songs);
           showNotification(`${songs.length} canción${songs.length > 1 ? 'es' : ''} exportada${songs.length > 1 ? 's' : ''} como JSON`, 'success');
           break;
-        case 'html':
-          exportAsHtml(songs);
-          showNotification(`${songs.length} canción${songs.length > 1 ? 'es' : ''} exportada${songs.length > 1 ? 's' : ''} como HTML (Word)`, 'success');
+        case 'word':
+          await exportAsWord(songs);
+          showNotification(`${songs.length} canción${songs.length > 1 ? 'es' : ''} exportada${songs.length > 1 ? 's' : ''} como Word`, 'success');
+          break;
+        case 'pdf':
+          exportAsPdf(songs);
+          showNotification(`${songs.length} canción${songs.length > 1 ? 'es' : ''} exportada${songs.length > 1 ? 's' : ''} como PDF`, 'success');
           break;
         case 'image':
-          showNotification('Exportación como imagen próximamente', 'info');
-          return;
+          if (songElementId) {
+            await exportAsImage(songElementId, songs[0]?.title || 'cancion');
+            showNotification('Imagen exportada correctamente', 'success');
+          } else {
+            showNotification('No se puede capturar imagen de múltiples canciones', 'error');
+            return;
+          }
+          break;
       }
       onClose();
     } catch (error) {
@@ -61,22 +72,36 @@ export default function ExportModal({ songs, onClose }: ExportModalProps) {
             <div className="flex items-center gap-3">
               <FileText size={24} style={{ color: 'var(--accent)' }} />
               <div>
-                <div className="font-semibold text-sm">Archivo de texto (.txt)</div>
+                <div className="font-semibold text-sm">📄 Archivo de texto (.txt)</div>
                 <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Letra con acordes en texto plano</div>
               </div>
             </div>
           </button>
 
           <button
-            onClick={() => handleExport('html')}
+            onClick={() => handleExport('word')}
             className="w-full p-4 rounded-xl border text-left transition-all hover:scale-[1.02]"
             style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
           >
             <div className="flex items-center gap-3">
-              <FileCode size={24} style={{ color: 'var(--accent)' }} />
+              <File size={24} style={{ color: 'var(--accent)' }} />
               <div>
-                <div className="font-semibold text-sm">Archivo de Word (.html)</div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Formato compatible con Word</div>
+                <div className="font-semibold text-sm">📝 Archivo de Word (.docx)</div>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Documento Word editable</div>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleExport('pdf')}
+            className="w-full p-4 rounded-xl border text-left transition-all hover:scale-[1.02]"
+            style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
+          >
+            <div className="flex items-center gap-3">
+              <FileDown size={24} style={{ color: 'var(--accent)' }} />
+              <div>
+                <div className="font-semibold text-sm">📕 Archivo PDF</div>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Documento PDF para imprimir</div>
               </div>
             </div>
           </button>
@@ -89,7 +114,7 @@ export default function ExportModal({ songs, onClose }: ExportModalProps) {
             <div className="flex items-center gap-3">
               <FileJson size={24} style={{ color: 'var(--accent)' }} />
               <div>
-                <div className="font-semibold text-sm">Documento JSON</div>
+                <div className="font-semibold text-sm">📦 Documento JSON</div>
                 <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Datos completos para reimportar</div>
               </div>
             </div>
@@ -97,14 +122,17 @@ export default function ExportModal({ songs, onClose }: ExportModalProps) {
 
           <button
             onClick={() => handleExport('image')}
-            className="w-full p-4 rounded-xl border text-left transition-all hover:scale-[1.02] opacity-60"
+            disabled={!songElementId}
+            className="w-full p-4 rounded-xl border text-left transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
           >
             <div className="flex items-center gap-3">
-              <Image size={24} style={{ color: 'var(--text-muted)' }} />
+              <Image size={24} style={{ color: 'var(--accent)' }} />
               <div>
-                <div className="font-semibold text-sm">Captura de imagen</div>
-                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Próximamente</div>
+                <div className="font-semibold text-sm">🖼️ Captura de imagen</div>
+                <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {songElementId ? 'Captura PNG de la canción' : 'Solo disponible para una canción'}
+                </div>
               </div>
             </div>
           </button>

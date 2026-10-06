@@ -779,7 +779,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
             </div>
           </div>
         )}
-        <div className="p-5 md:p-8" translate="no">{renderLyrics()}</div>
+        <div id="song-lyrics-container" className="p-5 md:p-8" translate="no">{renderLyrics()}</div>
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
@@ -862,7 +862,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       </div>
 
       {showExportModal && (
-        <ExportModal songs={[song]} onClose={() => setShowExportModal(false)} />
+        <ExportModal songs={[song]} onClose={() => setShowExportModal(false)} songElementId="song-lyrics-container" />
       )}
 
       {showAddToList && (
@@ -894,6 +894,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [showHymnalMenu, setShowHymnalMenu] = useState(false);
+  const [showHymnalExportModal, setShowHymnalExportModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
   const hymnalSongs = useMemo(() => {
@@ -984,50 +985,12 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
         }
         break;
       case 'export':
-        setShowExportModal(true);
+        setShowHymnalExportModal(true);
         break;
     }
   };
 
-  // Exportar canciones seleccionadas
-  const handleExport = (format: string) => {
-    const selectedSongsData = hymnalSongs.filter(s => selectedSongs.includes(s.id));
-    let content = '';
-    let filename = '';
-    let mimeType = '';
 
-    switch (format) {
-      case 'json':
-        content = JSON.stringify(selectedSongsData, null, 2);
-        filename = `${hymnal.name}_seleccion.json`;
-        mimeType = 'application/json';
-        break;
-      case 'txt':
-        content = selectedSongsData.map(s => `${getDisplayCode(s)} - ${s.title}\n${s.artist}\n\n${s.lyrics}\n\n${'='.repeat(50)}\n\n`).join('');
-        filename = `${hymnal.name}_seleccion.txt`;
-        mimeType = 'text/plain';
-        break;
-      case 'pdf':
-        showNotification('Exportación a PDF (próximamente)', 'info');
-        setShowExportModal(false);
-        return;
-      case 'docx':
-        showNotification('Exportación a Word (próximamente)', 'info');
-        setShowExportModal(false);
-        return;
-    }
-
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-    showNotification(`${selectedSongs.length} canciones exportadas`, 'success');
-    setShowExportModal(false);
-    setSelectedSongs([]);
-  };
 
 
 
@@ -1218,28 +1181,11 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
       </div>
       
       {/* Modal de exportación */}
-      {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowExportModal(false)}>
-          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-lg">Exportar {selectedSongs.length} canciones</h3>
-            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Selecciona el formato de exportación:</p>
-            <div className="space-y-2">
-              <button onClick={() => handleExport('json')} className="w-full p-3 rounded-xl border text-left text-sm font-medium hover:scale-[1.02] transition-all" style={{ borderColor: 'var(--border-color)' }}>
-                📄 Documento JSON
-              </button>
-              <button onClick={() => handleExport('txt')} className="w-full p-3 rounded-xl border text-left text-sm font-medium hover:scale-[1.02] transition-all" style={{ borderColor: 'var(--border-color)' }}>
-                📝 Documento de texto
-              </button>
-              <button onClick={() => handleExport('pdf')} className="w-full p-3 rounded-xl border text-left text-sm font-medium hover:scale-[1.02] transition-all" style={{ borderColor: 'var(--border-color)' }}>
-                📕 Documento PDF
-              </button>
-              <button onClick={() => handleExport('docx')} className="w-full p-3 rounded-xl border text-left text-sm font-medium hover:scale-[1.02] transition-all" style={{ borderColor: 'var(--border-color)' }}>
-                📘 Documento Word
-              </button>
-            </div>
-            <button onClick={() => setShowExportModal(false)} className="w-full py-2.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
-          </div>
-        </div>
+      {showHymnalExportModal && (
+        <ExportModal 
+          songs={hymnalSongs.filter(s => selectedSongs.includes(s.id))} 
+          onClose={() => setShowHymnalExportModal(false)} 
+        />
       )}
     </div>
   );
