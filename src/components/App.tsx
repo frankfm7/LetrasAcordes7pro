@@ -352,10 +352,12 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   const [showAddToList, setShowAddToList] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(50);
+  const [scrollSpeed, setScrollSpeed] = useState(15);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialSong.language.split('/')[0]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
+  const scrollPauseRef = useRef<boolean>(false);
   
   // Estados para las notas personales
   const [personalNotes, setPersonalNotes] = useState<{ note2: string; note3: string }>(() => {
@@ -429,7 +431,11 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollSpeed / 20; }, 50);
+      scrollIntervalRef.current = window.setInterval(() => { 
+        if (!scrollPauseRef.current) {
+          container.scrollTop += scrollSpeed / 20; 
+        }
+      }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
     return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
   }, [isAutoScrolling, scrollSpeed]);
@@ -442,7 +448,19 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         const containerRect = container.getBoundingClientRect();
         const elementRect = (element as HTMLElement).getBoundingClientRect();
         const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
-        container.scrollTo({ top: relativeTop - 80, behavior: 'smooth' });
+        
+        // Pausar auto-scroll si está activo
+        if (isAutoScrolling) {
+          scrollPauseRef.current = true;
+          container.scrollTo({ top: relativeTop - 80, behavior: 'smooth' });
+          
+          // Esperar 2 segundos y continuar
+          setTimeout(() => {
+            scrollPauseRef.current = false;
+          }, 2000);
+        } else {
+          container.scrollTo({ top: relativeTop - 80, behavior: 'smooth' });
+        }
       }
     }
   };
@@ -724,13 +742,45 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
-        {isAutoScrolling && (
-          <div className="rounded-xl p-2 flex flex-col items-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)', backdropFilter: 'blur(5px)' }}>
-            <input type="range" min="10" max="200" step="10" value={scrollSpeed} onChange={e => setScrollSpeed(Number(e.target.value))} className="accent-purple-400" style={{ writingMode: 'vertical-lr' as any, direction: 'rtl', height: '80px', width: '24px' }} />
-            <div className="text-[10px] font-bold mt-1 text-white/90">{scrollSpeed}</div>
+        {/* Menú de velocidades */}
+        {showSpeedMenu && (
+          <div className="rounded-xl p-3 mb-2 w-32" style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}>
+            <div className="text-[10px] text-white/70 mb-2 text-center font-semibold">VELOCIDAD</div>
+            <div className="flex flex-col gap-1">
+              {[
+                { value: 5, label: 'Muy lento' },
+                { value: 10, label: 'Lento' },
+                { value: 15, label: 'Normal' },
+                { value: 25, label: 'Rápido' },
+                { value: 40, label: 'Muy rápido' }
+              ].map(speed => (
+                <button
+                  key={speed.value}
+                  onClick={() => { setScrollSpeed(speed.value); setShowSpeedMenu(false); }}
+                  className="px-2 py-1.5 rounded-lg text-xs text-left transition-all hover:bg-white/20"
+                  style={{ 
+                    backgroundColor: scrollSpeed === speed.value ? 'rgba(139, 92, 246, 0.6)' : 'transparent',
+                    color: 'white'
+                  }}
+                >
+                  {speed.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-        <button onClick={() => setIsAutoScrolling(!isAutoScrolling)} className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.85)' : 'rgba(124,58,237,0.85)', color: 'white' }}>{isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}</button>
+        
+        {/* Botón de velocidad */}
+        <button 
+          onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+          className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95 text-xs font-bold"
+          style={{ backgroundColor: 'rgba(139, 92, 246, 0.75)', color: 'white', backdropFilter: 'blur(5px)' }}
+        >
+          {scrollSpeed}
+        </button>
+        
+        {/* Botón de play/pause */}
+        <button onClick={() => setIsAutoScrolling(!isAutoScrolling)} className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.75)' : 'rgba(124,58,237,0.75)', color: 'white', backdropFilter: 'blur(5px)' }}>{isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}</button>
       </div>
 
       {showAddToList && (
