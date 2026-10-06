@@ -526,35 +526,31 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               {song.key}
             </button>
             {/* Nota Personal 1 - doble clic para seleccionar tono */}
-            {personalNotes.note2 && (
-              <button
-                onDoubleClick={() => setEditingNote('note2')}
-                className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-                style={{ 
-                  backgroundColor: 'var(--accent-light)',
-                  color: 'var(--accent)',
-                  border: '1px solid var(--border-color)'
-                }}
-                title="Doble clic para cambiar tono"
-              >
-                {personalNotes.note2}
-              </button>
-            )}
+            <button
+              onDoubleClick={() => setEditingNote('note2')}
+              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
+              style={{ 
+                backgroundColor: personalNotes.note2 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                color: personalNotes.note2 ? 'var(--accent)' : 'var(--text-muted)',
+                border: '1px solid var(--border-color)'
+              }}
+              title="Doble clic para seleccionar tono"
+            >
+              {personalNotes.note2 || '—'}
+            </button>
             {/* Nota Personal 2 - doble clic para seleccionar tono */}
-            {personalNotes.note3 && (
-              <button
-                onDoubleClick={() => setEditingNote('note3')}
-                className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-                style={{ 
-                  backgroundColor: 'var(--accent-light)',
-                  color: 'var(--accent)',
-                  border: '1px solid var(--border-color)'
-                }}
-                title="Doble clic para cambiar tono"
-              >
-                {personalNotes.note3}
-              </button>
-            )}
+            <button
+              onDoubleClick={() => setEditingNote('note3')}
+              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
+              style={{ 
+                backgroundColor: personalNotes.note3 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                color: personalNotes.note3 ? 'var(--accent)' : 'var(--text-muted)',
+                border: '1px solid var(--border-color)'
+              }}
+              title="Doble clic para seleccionar tono"
+            >
+              {personalNotes.note3 || '—'}
+            </button>
           </div>
         </div>
         <button onClick={() => toggleFavorite(song.id)} className="p-2 rounded-xl" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={20} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
