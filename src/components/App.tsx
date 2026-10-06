@@ -352,10 +352,13 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   const [showAddToList, setShowAddToList] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(50);
+  const [scrollSpeed, setScrollSpeed] = useState(10);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [buttonOpacity, setButtonOpacity] = useState(40); // 0-100% de opacidad
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialSong.language.split('/')[0]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
+  const scrollPauseRef = useRef<boolean>(false);
   
   // Estados para las notas personales
   const [personalNotes, setPersonalNotes] = useState<{ note2: string; note3: string }>(() => {
@@ -395,6 +398,15 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     }
   }, [showActionsMenu]);
 
+  // Cerrar menú de velocidad al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = () => setShowSpeedMenu(false);
+    if (showSpeedMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showSpeedMenu]);
+
   const song = useMemo(() => {
     const customSong = state.customSongs.find(s => s.id === initialSong.id);
     return customSong || initialSong;
@@ -426,12 +438,41 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     return sectionList;
   }, [transposedLyrics]);
 
+  // Función de conversión de velocidad a milisegundos
+  const getSpeedMs = (velocidad: number): number => {
+    if (velocidad <= 10) {
+      // Del 1 al 10 valores fijos (ya funciona bien)
+      const valores: Record<number, number> = {
+        1: 120, 2: 100, 3: 85, 4: 70, 5: 60,
+        6: 52, 7: 45, 8: 38, 9: 32, 10: 25
+      };
+      return valores[velocidad] || 25;
+    }
+    // Del 10 al 70 usar fórmula exponencial
+    return Math.max(3, Math.round(25 * Math.pow(0.93, velocidad - 10)));
+  };
+
   useEffect(() => {
     if (isAutoScrolling && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      scrollIntervalRef.current = window.setInterval(() => { container.scrollTop += scrollSpeed / 20; }, 50);
-    } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
-    return () => { if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current); };
+      const ms = getSpeedMs(scrollSpeed);
+      
+      scrollIntervalRef.current = window.setInterval(() => { 
+        if (!scrollPauseRef.current) {
+          container.scrollTop += 1;
+        }
+      }, ms);
+    } else { 
+      if (scrollIntervalRef.current) { 
+        clearInterval(scrollIntervalRef.current); 
+        scrollIntervalRef.current = null; 
+      } 
+    }
+    return () => { 
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+    };
   }, [isAutoScrolling, scrollSpeed]);
 
   const scrollToSection = (sectionId: string) => {
@@ -442,7 +483,19 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         const containerRect = container.getBoundingClientRect();
         const elementRect = (element as HTMLElement).getBoundingClientRect();
         const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
-        container.scrollTo({ top: relativeTop - 80, behavior: 'smooth' });
+        
+        // Pausar auto-scroll si está activo
+        if (isAutoScrolling) {
+          scrollPauseRef.current = true;
+          container.scrollTo({ top: relativeTop - 80, behavior: 'smooth' });
+          
+          // Esperar 2 segundos y continuar
+          setTimeout(() => {
+            scrollPauseRef.current = false;
+          }, 2000);
+        } else {
+          container.scrollTo({ top: relativeTop - 80, behavior: 'smooth' });
+        }
       }
     }
   };
@@ -724,13 +777,82 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
-        {isAutoScrolling && (
-          <div className="rounded-xl p-2 flex flex-col items-center" style={{ backgroundColor: 'rgba(0,0,0,0.15)', backdropFilter: 'blur(5px)' }}>
-            <input type="range" min="10" max="200" step="10" value={scrollSpeed} onChange={e => setScrollSpeed(Number(e.target.value))} className="accent-purple-400" style={{ writingMode: 'vertical-lr' as any, direction: 'rtl', height: '80px', width: '24px' }} />
-            <div className="text-[10px] font-bold mt-1 text-white/90">{scrollSpeed}</div>
+        {/* Número de velocidad - ARRIBA del play, solo el número visible */}
+        <button 
+          onClick={(e) => { e.stopPropagation(); setShowSpeedMenu(!showSpeedMenu); }}
+          className="text-lg font-bold transition-all hover:scale-110 active:scale-95"
+          style={{ 
+            color: 'white',
+            textShadow: '0 0 10px rgba(0,0,0,0.8)'
+          }}
+        >
+          {scrollSpeed}
+        </button>
+        
+        {/* Ventana de control de velocidad */}
+        {showSpeedMenu && (
+          <div className="rounded-2xl p-4 mb-2 w-56" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)' }}>
+            <div className="text-xs text-white/90 mb-3 text-center font-bold">CONTROL DE VELOCIDAD</div>
+            
+            {/* Velocidad actual */}
+            <div className="text-center mb-3">
+              <div className="text-3xl font-bold text-white">{scrollSpeed}</div>
+              <div className="text-[10px] text-white/60">velocidad actual</div>
+            </div>
+            
+            {/* Slider para velocidad personalizada */}
+            <div className="mb-3">
+              <input 
+                type="range" 
+                min="1" 
+                max="70" 
+                step="1"
+                value={scrollSpeed} 
+                onChange={e => setScrollSpeed(Number(e.target.value))} 
+                className="w-full accent-purple-400"
+                style={{ opacity: 0.9 }}
+              />
+              <div className="flex justify-between text-[9px] text-white/50 mt-1">
+                <span>Muy lento</span>
+                <span>Muy rápido</span>
+              </div>
+            </div>
+            
+            {/* Control de opacidad del botón */}
+            <div className="border-t border-white/20 pt-3">
+              <div className="text-[10px] text-white/60 mb-2">Opacidad del botón</div>
+              <input 
+                type="range" 
+                min="10" 
+                max="100" 
+                step="5"
+                value={buttonOpacity} 
+                onChange={e => setButtonOpacity(Number(e.target.value))} 
+                className="w-full accent-purple-400"
+                style={{ opacity: 0.9 }}
+              />
+              <div className="flex justify-between text-[9px] text-white/50 mt-1">
+                <span>Transparente</span>
+                <span>Opaco</span>
+              </div>
+            </div>
           </div>
         )}
-        <button onClick={() => setIsAutoScrolling(!isAutoScrolling)} className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" style={{ backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.85)' : 'rgba(124,58,237,0.85)', color: 'white' }}>{isAutoScrolling ? <Pause size={24} /> : <Play size={24} className="ml-1" />}</button>
+        
+        {/* Botón de play/pause - con opacidad ajustable */}
+        <button 
+          onClick={() => setIsAutoScrolling(!isAutoScrolling)}
+          className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
+          style={{ 
+            backgroundColor: isAutoScrolling 
+              ? `rgba(239,68,68,${buttonOpacity / 100})`
+              : `rgba(124,58,237,${buttonOpacity / 100})`,
+            color: 'white', 
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
+        </button>
       </div>
 
       {showAddToList && (
