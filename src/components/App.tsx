@@ -537,8 +537,8 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         const chordLine = trimmed.substring(2).trim();
         if (i + 1 < lines.length && lines[i + 1].trim() !== '' && !lines[i + 1].trim().startsWith('//')) {
           const lyricLine = lines[i + 1]; i++;
-          elements.push(<div key={lineIndex++} className="mb-4">{preferences.showChords && <div className="font-mono text-sm mb-1 whitespace-pre" style={{ color: 'var(--accent)', fontWeight: 800, letterSpacing: '0.05em' }} translate="no">{chordLine}</div>}<div className="font-lyrics leading-relaxed whitespace-pre-wrap" style={{ fontSize: `${preferences.fontSize}px` }}>{lyricLine}</div></div>);
-        } else { elements.push(<div key={lineIndex++} className="mb-2">{preferences.showChords && <div className="font-mono text-sm whitespace-pre" style={{ color: 'var(--accent)', fontWeight: 800 }} translate="no">{chordLine}</div>}</div>); }
+          elements.push(<div key={lineIndex++} className="mb-3">{preferences.showChords && <div className="font-mono mb-0.5 whitespace-pre" style={{ color: 'var(--accent)', fontWeight: 800, letterSpacing: '0.05em', fontSize: `${preferences.fontSize * 0.75}px` }} translate="no">{chordLine}</div>}<div className="font-lyrics leading-relaxed whitespace-pre-wrap" style={{ fontSize: `${preferences.fontSize}px` }}>{lyricLine}</div></div>);
+        } else { elements.push(<div key={lineIndex++} className="mb-2">{preferences.showChords && <div className="font-mono whitespace-pre" style={{ color: 'var(--accent)', fontWeight: 800, fontSize: `${preferences.fontSize * 0.75}px` }} translate="no">{chordLine}</div>}</div>); }
         continue;
       }
       elements.push(<div key={lineIndex++} className="mb-4"><div className="font-lyrics leading-relaxed whitespace-pre-wrap" style={{ fontSize: `${preferences.fontSize}px` }}>{line}</div></div>);
