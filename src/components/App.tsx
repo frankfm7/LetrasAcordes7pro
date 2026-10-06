@@ -601,88 +601,92 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
 
   return (
     <div className="max-w-3xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
-      <div className="flex-shrink-0 flex items-center gap-2 mb-2">
-        <button onClick={onBack} className="p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={18} /></button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-base font-bold truncate">{song.title}</h1>
-          <div className="flex items-center gap-2 text-xs flex-wrap" style={{ color: 'var(--text-muted)' }}>
-            <span>{song.artist}</span>
-            <span>•</span>
-            <span className="font-bold" style={{ color: 'var(--accent)' }} translate="no">{song.key}</span>
-            <span translate="no">{song.timeSignature}</span>
-            <span translate="no">{song.bpm} BPM</span>
-            {/* Botón nota original - clic para volver al tono original */}
-            <button
-              onClick={() => setTransposition(0)}
-              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: transposition === 0 ? 'var(--accent)' : 'var(--bg-tertiary)',
-                color: transposition === 0 ? 'white' : 'var(--text-primary)',
-                border: '1px solid var(--border-color)'
-              }}
-              title="Volver al tono original"
-              translate="no"
-            >
-              {song.key}
-            </button>
-            {/* Nota Personal 1 - doble clic para seleccionar tono, clic para aplicar */}
-            <button
-              onClick={() => {
-                const note2Formatted = formatNote(personalNotes.note2);
-                if (note2Formatted) {
-                  handleKeyChange(note2Formatted);
-                }
-              }}
-              onDoubleClick={() => setEditingNote('note2')}
-              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'var(--accent)' : formatNote(personalNotes.note2) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                color: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'white' : formatNote(personalNotes.note2) ? 'var(--accent)' : 'var(--text-muted)',
-                border: '1px solid var(--border-color)'
-              }}
-              title="Clic para aplicar, doble clic para cambiar"
-              translate="no"
-            >
-              {formatNote(personalNotes.note2) || '—'}
-            </button>
-            {/* Nota Personal 2 - doble clic para seleccionar tono, clic para aplicar */}
-            <button
-              onClick={() => {
-                const note3Formatted = formatNote(personalNotes.note3);
-                if (note3Formatted) {
-                  handleKeyChange(note3Formatted);
-                }
-              }}
-              onDoubleClick={() => setEditingNote('note3')}
-              className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'var(--accent)' : formatNote(personalNotes.note3) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                color: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'white' : formatNote(personalNotes.note3) ? 'var(--accent)' : 'var(--text-muted)',
-                border: '1px solid var(--border-color)'
-              }}
-              title="Clic para aplicar, doble clic para cambiar"
-              translate="no"
-            >
-              {formatNote(personalNotes.note3) || '—'}
-            </button>
-          </div>
-        </div>
-        <button onClick={() => toggleFavorite(song.id)} className="p-2 rounded-xl" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={20} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
+      {/* Fila 1: Botón volver + Título + Badge de idioma */}
+      <div className="flex-shrink-0 flex items-center gap-2 mb-1">
+        <button onClick={onBack} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={16} /></button>
+        <h1 className="flex-1 text-sm sm:text-base font-bold truncate">{song.title}</h1>
         {song.lyricsByLanguage && Object.keys(song.lyricsByLanguage).length > 1 && (
-          <button onClick={() => { const languages = Object.keys(song.lyricsByLanguage!); const idx = languages.indexOf(currentLanguage); setCurrentLanguage(languages[(idx + 1) % languages.length]); }} className="px-3 py-1.5 rounded-xl text-xs font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>{currentLanguage}</button>
+          <button onClick={() => { const languages = Object.keys(song.lyricsByLanguage!); const idx = languages.indexOf(currentLanguage); setCurrentLanguage(languages[(idx + 1) % languages.length]); }} className="px-2 py-1 rounded-lg text-xs font-semibold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>{currentLanguage}</button>
         )}
-        <button onClick={() => setShowConfig(!showConfig)} className="p-2 rounded-xl" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={18} /></button>
-        <div className="relative" data-menu>
-          <button onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }} className="p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={18} /></button>
-          {showActionsMenu && (
-            <div className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-              <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
-              <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
-              <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
-              <button onClick={() => { showNotification('Importar canción (próximamente)', 'info'); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
-              <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
-            </div>
-          )}
+      </div>
+
+      {/* Fila 2: Información secundaria + Transposición + Acciones */}
+      <div className="flex-shrink-0 flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-1.5 text-xs flex-wrap flex-1 min-w-0" style={{ color: 'var(--text-muted)' }}>
+          <span className="truncate">{song.artist}</span>
+          <span>•</span>
+          <span className="font-bold" style={{ color: 'var(--accent)' }} translate="no">{song.key}</span>
+          <span translate="no">{song.timeSignature}</span>
+          <span translate="no">{song.bpm} BPM</span>
+          {/* Botones de transposición */}
+          <button
+            onClick={() => setTransposition(0)}
+            className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
+            style={{ 
+              backgroundColor: transposition === 0 ? 'var(--accent)' : 'var(--bg-tertiary)',
+              color: transposition === 0 ? 'white' : 'var(--text-primary)',
+              border: '1px solid var(--border-color)'
+            }}
+            title="Volver al tono original"
+            translate="no"
+          >
+            {song.key}
+          </button>
+          <button
+            onClick={() => {
+              const note2Formatted = formatNote(personalNotes.note2);
+              if (note2Formatted) {
+                handleKeyChange(note2Formatted);
+              }
+            }}
+            onDoubleClick={() => setEditingNote('note2')}
+            className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
+            style={{ 
+              backgroundColor: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'var(--accent)' : formatNote(personalNotes.note2) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+              color: formatNote(personalNotes.note2) && getCurrentKey() === formatNote(personalNotes.note2) ? 'white' : formatNote(personalNotes.note2) ? 'var(--accent)' : 'var(--text-muted)',
+              border: '1px solid var(--border-color)'
+            }}
+            title="Clic para aplicar, doble clic para cambiar"
+            translate="no"
+          >
+            {formatNote(personalNotes.note2) || '—'}
+          </button>
+          <button
+            onClick={() => {
+              const note3Formatted = formatNote(personalNotes.note3);
+              if (note3Formatted) {
+                handleKeyChange(note3Formatted);
+              }
+            }}
+            onDoubleClick={() => setEditingNote('note3')}
+            className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
+            style={{ 
+              backgroundColor: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'var(--accent)' : formatNote(personalNotes.note3) ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+              color: formatNote(personalNotes.note3) && getCurrentKey() === formatNote(personalNotes.note3) ? 'white' : formatNote(personalNotes.note3) ? 'var(--accent)' : 'var(--text-muted)',
+              border: '1px solid var(--border-color)'
+            }}
+            title="Clic para aplicar, doble clic para cambiar"
+            translate="no"
+          >
+            {formatNote(personalNotes.note3) || '—'}
+          </button>
+        </div>
+        {/* Iconos de acción */}
+        <div className="flex items-center gap-1">
+          <button onClick={() => toggleFavorite(song.id)} className="p-1.5 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={16} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
+          <button onClick={() => setShowConfig(!showConfig)} className="p-1.5 rounded-lg" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={16} /></button>
+          <div className="relative" data-menu>
+            <button onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={16} /></button>
+            {showActionsMenu && (
+              <div className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+                <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
+                <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
+                <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
+                <button onClick={() => { showNotification('Importar canción (próximamente)', 'info'); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
+                <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
