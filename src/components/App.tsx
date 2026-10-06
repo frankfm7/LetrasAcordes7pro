@@ -552,8 +552,8 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               onDoubleClick={() => setEditingNote('note2')}
               className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
               style={{ 
-                backgroundColor: personalNotes.note2 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                color: personalNotes.note2 ? 'var(--accent)' : 'var(--text-muted)',
+                backgroundColor: personalNotes.note2 && getCurrentKey() === personalNotes.note2 ? 'var(--accent)' : personalNotes.note2 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                color: personalNotes.note2 && getCurrentKey() === personalNotes.note2 ? 'white' : personalNotes.note2 ? 'var(--accent)' : 'var(--text-muted)',
                 border: '1px solid var(--border-color)'
               }}
               title="Clic para aplicar, doble clic para cambiar"
@@ -576,8 +576,8 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               onDoubleClick={() => setEditingNote('note3')}
               className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
               style={{ 
-                backgroundColor: personalNotes.note3 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                color: personalNotes.note3 ? 'var(--accent)' : 'var(--text-muted)',
+                backgroundColor: personalNotes.note3 && getCurrentKey() === personalNotes.note3 ? 'var(--accent)' : personalNotes.note3 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                color: personalNotes.note3 && getCurrentKey() === personalNotes.note3 ? 'white' : personalNotes.note3 ? 'var(--accent)' : 'var(--text-muted)',
                 border: '1px solid var(--border-color)'
               }}
               title="Clic para aplicar, doble clic para cambiar"
