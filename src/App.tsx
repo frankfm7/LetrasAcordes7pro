@@ -656,24 +656,25 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       <div className="flex-shrink-0 flex items-center gap-2 mb-1">
         <button onClick={onBack} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={16} /></button>
         <h1 className="flex-1 text-sm sm:text-base font-bold truncate">{song.title}</h1>
-        {song.lyricsByLanguage && Object.keys(song.lyricsByLanguage).length > 1 && (
-          <div className="flex gap-1">
-            {Object.keys(song.lyricsByLanguage).map(lang => (
-              <button
-                key={lang}
-                onClick={() => setCurrentLanguage(lang)}
-                className="px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all"
-                style={{
-                  backgroundColor: currentLanguage === lang ? 'var(--accent)' : 'var(--bg-tertiary)',
-                  color: currentLanguage === lang ? 'white' : 'var(--text-primary)',
-                  border: currentLanguage === lang ? '2px solid var(--accent)' : '2px solid transparent'
-                }}
-              >
-                {lang}
-              </button>
-            ))}
-          </div>
-        )}
+        {song.lyricsByLanguage && Object.keys(song.lyricsByLanguage).length > 1 && (() => {
+          const languages = Object.keys(song.lyricsByLanguage);
+          const currentIndex = languages.indexOf(currentLanguage);
+          const nextIndex = (currentIndex + 1) % languages.length;
+          const nextLanguage = languages[nextIndex];
+          
+          return (
+            <button
+              onClick={() => setCurrentLanguage(nextLanguage)}
+              className="px-3 py-1 rounded-lg text-xs font-semibold transition-all hover:scale-105"
+              style={{
+                backgroundColor: 'var(--accent)',
+                color: 'white'
+              }}
+            >
+              {nextLanguage}
+            </button>
+          );
+        })()}
       </div>
 
       <div className="flex-shrink-0 flex items-center gap-2 mb-2">
