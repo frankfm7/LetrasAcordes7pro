@@ -444,14 +444,19 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   });
   const [editingNote, setEditingNote] = useState<'note2' | 'note3' | null>(null);
   const [showOriginalNote, setShowOriginalNote] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
-    const handleClickOutside = () => setShowSpeedMenu(false);
-    if (showSpeedMenu) {
+    const handleClickOutside = () => {
+      setShowSpeedMenu(false);
+      setShowActionsMenu(false);
+    };
+    if (showSpeedMenu || showActionsMenu) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [showSpeedMenu]);
+  }, [showSpeedMenu, showActionsMenu]);
 
   const song = useMemo(() => {
     const customSong = state.customSongs.find(s => s.id === initialSong.id);
@@ -546,6 +551,22 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
     setEditingNote(null);
     showNotification('Nota guardada', 'success');
+  };
+
+  const copyLyrics = () => {
+    const cleanLyrics = transposedLyrics.replace(/\/\/[^\n]*\n/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    navigator.clipboard.writeText(cleanLyrics);
+    showNotification('Letra copiada', 'success');
+  };
+
+  const shareSong = () => {
+    const text = generateSongShareText(song);
+    if (navigator.share) {
+      navigator.share({ title: song.title, text });
+    } else {
+      navigator.clipboard.writeText(text);
+      showNotification('Copiado al portapapeles', 'success');
+    }
   };
 
   const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -693,6 +714,17 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         <div className="flex items-center gap-1">
           <button onClick={() => toggleFavorite(song.id)} className="p-1.5 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={16} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
           <button onClick={() => setShowConfig(!showConfig)} className="p-1.5 rounded-lg" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={16} /></button>
+          <div className="relative" data-menu>
+            <button onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={16} /></button>
+            {showActionsMenu && (
+              <div className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+                <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
+                <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
+                <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
+                <button onClick={() => { setShowExportModal(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -857,6 +889,10 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
         </button>
       </div>
+
+      {showExportModal && (
+        <ExportModal songs={[song]} onClose={() => setShowExportModal(false)} songElementId="song-lyrics-container" />
+      )}
     </div>
   );
 }

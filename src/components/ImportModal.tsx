@@ -68,7 +68,7 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
 
     try {
       const newSongs: Song[] = previews.map((preview, index) => ({
-        id: `custom-${Date.now()}-${index}`,
+        id: `custom-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
         title: preview.title || 'Sin título',
         artist: preview.artist || 'Desconocido',
         code: `IMP${Date.now()}-${index}`,

@@ -51,7 +51,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('cancionero-ruah-state', JSON.stringify(state));
   }, [state]);
 
-  // Limpieza automática de datos corruptos al cargar
+  // Limpieza automática de datos corruptos y duplicados al cargar
   useEffect(() => {
     const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
                         'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
@@ -72,6 +72,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(key);
       }
     });
+
+    // Limpiar canciones duplicadas
+    const stateData = localStorage.getItem('cancionero-ruah-state');
+    if (stateData) {
+      try {
+        const parsed = JSON.parse(stateData);
+        if (parsed.customSongs && Array.isArray(parsed.customSongs)) {
+          const uniqueSongs = parsed.customSongs.filter((song: any, index: number, self: any[]) =>
+            index === self.findIndex((s: any) => s.id === song.id)
+          );
+          
+          if (uniqueSongs.length !== parsed.customSongs.length) {
+            console.log(`Eliminadas ${parsed.customSongs.length - uniqueSongs.length} canciones duplicadas`);
+            parsed.customSongs = uniqueSongs;
+            localStorage.setItem('cancionero-ruah-state', JSON.stringify(parsed));
+          }
+        }
+      } catch (error) {
+        console.error('Error al limpiar canciones duplicadas:', error);
+      }
+    }
   }, []);
 
   const toggleFavorite = useCallback((songId: string) => {

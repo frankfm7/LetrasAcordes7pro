@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, Image as ImageIcon } from 'lucide-react';
 import { Hymnal } from '../types';
 import { useApp } from '../context/AppContext';
 import { useNotification } from './NotificationProvider';
@@ -23,6 +23,23 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
   const [icon, setIcon] = useState(hymnal.icon);
   const [color, setColor] = useState(hymnal.color);
   const [codePrefix, setCodePrefix] = useState(hymnal.codePrefix || '');
+  const [coverImage, setCoverImage] = useState<string | null>(hymnal.image || null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification('La imagen es muy grande. Máximo 5MB', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCoverImage(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -49,6 +66,7 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
       icon,
       color,
       codePrefix: prefix,
+      image: coverImage || undefined,
     };
     onSave(updatedHymnal);
   };
@@ -133,6 +151,34 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Imagen de Portada (Opcional)</label>
+            {coverImage ? (
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-16 rounded-lg overflow-hidden">
+                  <img src={coverImage} alt="Preview" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Imagen cargada</p>
+                  <button onClick={() => setCoverImage(null)} className="text-xs text-red-500 font-semibold mt-1">Eliminar imagen</button>
+                </div>
+                <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  Cambiar
+                </label>
+              </div>
+            ) : (
+              <label className="cursor-pointer">
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <div className="rounded-xl border-2 border-dashed p-4 text-center transition-all hover:border-opacity-70" style={{ borderColor: 'var(--border-color)' }}>
+                  <ImageIcon size={24} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                  <p className="text-xs font-medium">Click para subir imagen</p>
+                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Se usará como fondo del cancionero</p>
+                </div>
+              </label>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
