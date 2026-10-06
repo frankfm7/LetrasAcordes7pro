@@ -42,14 +42,16 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
     let finalLyrics = lyrics;
     const finalLyricsByLanguage = { ...lyricsByLanguage };
 
-    // Si hay múltiples idiomas, guardar la letra actual en el idioma activo
-    if (allLanguages.length > 1) {
-      finalLyricsByLanguage[activeLanguageTab] = lyrics;
-      // Asegurar que el idioma principal esté en lyricsByLanguage
-      if (!finalLyricsByLanguage[language]) {
-        finalLyricsByLanguage[language] = lyrics;
-      }
-      // Usar la letra del idioma principal como principal
+    // Siempre guardar la letra actual en el idioma activo
+    finalLyricsByLanguage[activeLanguageTab] = lyrics;
+    
+    // Asegurar que el idioma principal esté en lyricsByLanguage
+    if (!finalLyricsByLanguage[language]) {
+      finalLyricsByLanguage[language] = lyrics;
+    }
+    
+    // Si hay múltiples idiomas, usar la letra del idioma principal como principal
+    if (Object.keys(finalLyricsByLanguage).length > 1) {
       finalLyrics = finalLyricsByLanguage[language] || lyrics;
     }
 
@@ -69,7 +71,8 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
       }
     }
 
-    const languageString = allLanguages.length > 1 ? allLanguages.join('/') : language;
+    const allLanguagesFinal = [language, ...Object.keys(finalLyricsByLanguage).filter(l => l !== language)];
+    const languageString = allLanguagesFinal.length > 1 ? allLanguagesFinal.join('/') : language;
 
     const updatedSong: Song = {
       ...song,
@@ -116,6 +119,30 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
     setNewLanguageName('');
     setShowAddLanguageModal(false);
     showNotification('Idioma agregado', 'success');
+  };
+
+  const handleAddLanguageWithPreset = (presetLang: string) => {
+    if (allLanguages.includes(presetLang)) {
+      showNotification('Este idioma ya existe', 'error');
+      return;
+    }
+    
+    const updatedLyricsByLanguage = { ...lyricsByLanguage };
+    // Guardar la letra actual en el idioma activo
+    updatedLyricsByLanguage[activeLanguageTab] = lyrics;
+    // Asegurar que el idioma principal también esté guardado
+    if (!updatedLyricsByLanguage[language]) {
+      updatedLyricsByLanguage[language] = lyrics;
+    }
+    // Agregar el nuevo idioma con letra vacía
+    updatedLyricsByLanguage[presetLang] = '';
+    
+    setLyricsByLanguage(updatedLyricsByLanguage);
+    setActiveLanguageTab(presetLang);
+    setLyrics('');
+    setNewLanguageName('');
+    setShowAddLanguageModal(false);
+    showNotification(`Idioma ${presetLang} agregado`, 'success');
   };
 
   const handleLanguageTabChange = (lang: string) => {
@@ -321,20 +348,56 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
       {/* Modal para agregar nuevo idioma */}
       {showAddLanguageModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddLanguageModal(false)}>
-          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-lg">Agregar Idioma</h3>
+            
+            {/* Idiomas predefinidos comunes */}
             <div>
-              <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Nombre del idioma</label>
+              <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Idiomas comunes</label>
+              <div className="flex flex-wrap gap-2">
+                {['Aymara', 'Quechua', 'Inglés', 'Portugués', 'Francés', 'Italiano', 'Alemán'].map(lang => {
+                  const isAlreadyAdded = allLanguages.includes(lang);
+                  return (
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        if (!isAlreadyAdded) {
+                          setNewLanguageName(lang);
+                          setTimeout(() => {
+                            handleAddLanguageWithPreset(lang);
+                          }, 0);
+                        }
+                      }}
+                      disabled={isAlreadyAdded}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                      style={{
+                        backgroundColor: isAlreadyAdded ? 'var(--bg-tertiary)' : 'var(--accent-light)',
+                        color: isAlreadyAdded ? 'var(--text-muted)' : 'var(--accent)',
+                        border: '2px solid var(--border-color)',
+                        opacity: isAlreadyAdded ? 0.5 : 1,
+                        cursor: isAlreadyAdded ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {isAlreadyAdded ? `${lang} ✓` : lang}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Opción de idioma personalizado */}
+            <div>
+              <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>O escribe un idioma personalizado</label>
               <input
                 type="text"
                 value={newLanguageName}
                 onChange={e => setNewLanguageName(e.target.value)}
-                placeholder="Ej: Francés, Portugués, etc."
+                placeholder="Ej: Guaraní, Mapudungun, etc."
                 className="w-full p-3 rounded-xl border text-sm"
                 style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-                autoFocus
               />
             </div>
+
             <div className="flex gap-2">
               <button
                 onClick={() => {
