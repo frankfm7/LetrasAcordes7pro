@@ -743,7 +743,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
-        {/* Ventana grande de control de velocidad */}
+        {/* Ventana de control de velocidad */}
         {showSpeedMenu && (
           <div className="rounded-2xl p-4 mb-2 w-56" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)' }}>
             <div className="text-xs text-white/90 mb-3 text-center font-bold">CONTROL DE VELOCIDAD</div>
@@ -770,32 +770,12 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 <span>Lento</span>
               </div>
             </div>
-            
-            {/* Velocidades predefinidas */}
-            <div className="border-t border-white/20 pt-2">
-              <div className="text-[10px] text-white/60 mb-2">Velocidades rápidas:</div>
-              <div className="grid grid-cols-3 gap-1">
-                {[5, 10, 15, 20, 30, 40].map(speed => (
-                  <button
-                    key={speed}
-                    onClick={() => setScrollSpeed(speed)}
-                    className="px-2 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/20"
-                    style={{ 
-                      backgroundColor: scrollSpeed === speed ? 'rgba(139, 92, 246, 0.6)' : 'rgba(255,255,255,0.1)',
-                      color: 'white'
-                    }}
-                  >
-                    {speed}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
         
-        {/* Botón de play/pause - más pequeño y transparente para móviles */}
+        {/* Botón de play/pause - transparente y pequeño */}
         <button 
-          onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+          onClick={() => setIsAutoScrolling(!isAutoScrolling)}
           className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
           style={{ 
             backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.4)' : 'rgba(124,58,237,0.4)', 
@@ -804,6 +784,19 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           }}
         >
           {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
+        </button>
+        
+        {/* Número de velocidad - solo el número, cliqueable */}
+        <button 
+          onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+          className="text-sm font-bold transition-all hover:scale-110 active:scale-95 px-2 py-1 rounded-lg"
+          style={{ 
+            color: 'white',
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {scrollSpeed}
         </button>
       </div>
 
