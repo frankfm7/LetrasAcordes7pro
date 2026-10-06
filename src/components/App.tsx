@@ -13,6 +13,9 @@ import SongEditor from './SongEditor';
 import AddHymnalModal from './AddHymnalModal';
 import EditHymnalModal from './EditHymnalModal';
 import ExportModal from './ExportModal';
+import ToolsMenu from './ToolsMenu';
+import ExportOptions from './ExportOptions';
+import ImportModal from './ImportModal';
 
 export default function App() {
   return (
@@ -39,6 +42,8 @@ function AppContent() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [addingSongToHymnal, setAddingSongToHymnal] = useState<Hymnal | null>(null);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
 
   useEffect(() => {
     document.documentElement.className = state.preferences.theme;
@@ -113,9 +118,72 @@ function AppContent() {
 
   if (showSplash) return <SplashScreen onComplete={() => setShowSplash(false)} />;
 
+  if (showToolsMenu) {
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <ToolsMenu 
+          onClose={() => setShowToolsMenu(false)} 
+          onNavigate={handleNavigate}
+          onExportClick={() => {
+            setShowToolsMenu(false);
+            setShowExportOptions(true);
+          }}
+          onImportClick={() => {
+            setShowToolsMenu(false);
+            setShowImportModal(true);
+          }}
+        />
+      </Layout>
+    );
+  }
+
+  if (showExportOptions) {
+    const allHymnals = [...hymnals, ...state.customHymnals];
+    const allAvailableSongs = [...allSongs, ...state.customSongs];
+    
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <ExportOptions
+          onClose={() => setShowExportOptions(false)}
+          songs={allAvailableSongs}
+          hymnals={allHymnals}
+          onExportSingle={() => {
+            setShowExportOptions(false);
+            handleNavigate('search');
+          }}
+          onExportMultiple={() => {
+            setShowExportOptions(false);
+            // TODO: Implementar selección múltiple global
+            console.log('Exportar múltiples');
+          }}
+          onExportHymnal={(hymnalId) => {
+            setShowExportOptions(false);
+            const hymnal = allHymnals.find(h => h.id === hymnalId);
+            if (hymnal) {
+              setSelectedHymnal(hymnal);
+            }
+          }}
+        />
+      </Layout>
+    );
+  }
+
+  if (showImportModal) {
+    const allHymnals = [...hymnals, ...state.customHymnals];
+    
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          hymnals={allHymnals}
+        />
+      </Layout>
+    );
+  }
+
   if (editingSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongEditor song={editingSong} onBack={() => setEditingSong(null)} />
       </Layout>
     );
@@ -123,7 +191,7 @@ function AppContent() {
 
   if (selectedSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongView song={selectedSong} onBack={handleBack} onEdit={() => setEditingSong(selectedSong)} showNotification={showNotification} />
       </Layout>
     );
@@ -149,7 +217,7 @@ function AppContent() {
       notes: '',
     };
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongEditor song={newSong} onBack={() => setAddingSongToHymnal(null)} />
       </Layout>
     );
@@ -157,7 +225,7 @@ function AppContent() {
 
   if (selectedHymnal) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onAddSong={(h: Hymnal) => setAddingSongToHymnal(h)} onDeleteHymnal={handleDeleteHymnal} showNotification={showNotification} />
         {showEditHymnalModal && editingHymnal && (
           <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setSelectedHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
@@ -179,7 +247,7 @@ function AppContent() {
   };
 
   return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
       {renderPage()}
       {showEditHymnalModal && editingHymnal && (
         <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
@@ -215,7 +283,7 @@ function AppContent() {
   );
 }
 
-function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport }: any) {
+function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport, onToolsClick }: any) {
   const { state, setTheme } = useApp();
   const menuItems = [
     { id: 'home', label: 'Inicio', icon: Home },
@@ -289,7 +357,7 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
         <div className="max-w-6xl mx-auto flex">
           {[{ id: 'home', label: 'Inicio', icon: Home }, { id: 'search', label: 'Buscar', icon: Search }, { id: 'favorites', label: 'Favoritos', icon: Heart }, { id: 'setlists', label: 'Listas', icon: ListMusic }, { id: 'orders', label: 'Órdenes', icon: Music }, { id: 'tools', label: 'Tools', icon: Settings }].map(item => {
             const isActive = currentPage === item.id;
-            return (<button key={item.id} onClick={() => onNavigate(item.id)} className={`flex-1 flex flex-col items-center py-3 px-1 transition-all ${isActive ? 'scale-105' : 'opacity-60'}`} style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}><item.icon size={18} strokeWidth={isActive ? 2.5 : 1.5} /><span className="text-[9px] font-semibold mt-1">{item.label}</span>{isActive && <div className="absolute top-0 w-8 h-0.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />}</button>);
+            return (<button key={item.id} onClick={() => item.id === 'tools' ? onToolsClick() : onNavigate(item.id)} className={`flex-1 flex flex-col items-center py-3 px-1 transition-all ${isActive ? 'scale-105' : 'opacity-60'}`} style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}><item.icon size={18} strokeWidth={isActive ? 2.5 : 1.5} /><span className="text-[9px] font-semibold mt-1">{item.label}</span>{isActive && <div className="absolute top-0 w-8 h-0.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />}</button>);
           })}
         </div>
       </nav>
@@ -347,11 +415,9 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) 
 }
 
 function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) {
-  const { state, toggleFavorite, isFavorite, setFontSize, setShowChords, setCapo, addSongToSetlist } = useApp();
+  const { state, toggleFavorite, isFavorite, setFontSize, setShowChords, setCapo } = useApp();
   const [transposition, setTransposition] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
-  const [showAddToList, setShowAddToList] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(10);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
@@ -389,16 +455,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   });
   const [editingNote, setEditingNote] = useState<'note2' | 'note3' | null>(null);
   const [showOriginalNote, setShowOriginalNote] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-
-  // Cerrar menú de acciones al hacer clic fuera
-  useEffect(() => {
-    const handleClickOutside = () => setShowActionsMenu(false);
-    if (showActionsMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showActionsMenu]);
 
   // Cerrar menú de velocidad al hacer clic fuera
   useEffect(() => {
@@ -500,18 +556,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         }
       }
     }
-  };
-
-  const copyLyrics = () => {
-    const cleanLyrics = transposedLyrics.replace(/\/\/[^\n]*\n/g, '').replace(/\n{3,}/g, '\n\n').trim();
-    navigator.clipboard.writeText(cleanLyrics);
-    showNotification('Letra copiada', 'success');
-  };
-
-  const shareSong = () => {
-    const text = generateSongShareText(song);
-    if (navigator.share) navigator.share({ title: song.title, text });
-    else { navigator.clipboard.writeText(text); showNotification('Copiado', 'success'); }
   };
 
   // Función para guardar notas personales
@@ -677,18 +721,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         <div className="flex items-center gap-1">
           <button onClick={() => toggleFavorite(song.id)} className="p-1.5 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={16} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
           <button onClick={() => setShowConfig(!showConfig)} className="p-1.5 rounded-lg" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={16} /></button>
-          <div className="relative" data-menu>
-            <button onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={16} /></button>
-            {showActionsMenu && (
-              <div className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-                <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
-                <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
-                <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
-                <button onClick={() => { setShowExportModal(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
-                <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -860,30 +892,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
         </button>
       </div>
-
-      {showExportModal && (
-        <ExportModal songs={[song]} onClose={() => setShowExportModal(false)} songElementId="song-lyrics-container" />
-      )}
-
-      {showAddToList && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddToList(false)}>
-          <div className="w-full max-w-md rounded-2xl p-5" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-lg mb-3">Agregar a Lista</h3>
-            {state.setlists.length === 0 ? (
-              <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No tienes listas</p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {state.setlists.map(setlist => (
-                  <button key={setlist.id} onClick={() => { addSongToSetlist(setlist.id, { songId: song.id, transposition: 0, notes: '', order: setlist.songs.length }); setShowAddToList(false); showNotification('Agregada a la lista', 'success'); }} className="w-full text-left p-3 rounded-xl border" style={{ borderColor: 'var(--border-color)' }}>
-                    <div className="font-medium text-sm">{setlist.name}</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{setlist.songs.length} canciones</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
