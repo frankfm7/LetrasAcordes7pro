@@ -446,6 +446,49 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     showNotification('Nota guardada', 'success');
   };
 
+  // Funciones de transposición
+  const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  
+  const getCurrentKey = () => {
+    const baseKey = song.key.replace('m', ''); // Remover 'm' si es menor
+    const baseIndex = NOTES.indexOf(baseKey);
+    if (baseIndex === -1) return song.key;
+    
+    const newIndex = ((baseIndex + transposition) % 12 + 12) % 12;
+    const newNote = NOTES[newIndex];
+    return song.key.includes('m') ? newNote + 'm' : newNote;
+  };
+
+  const getAlternativeKeys = () => {
+    const baseKey = song.key.replace('m', '');
+    const baseIndex = NOTES.indexOf(baseKey);
+    if (baseIndex === -1) return [];
+    
+    // Tonos alternativos comunes (saltos de 2, 3, 5, 7 semitonos)
+    const intervals = [2, 3, 5, 7];
+    return intervals.map(interval => {
+      const newIndex = (baseIndex + interval) % 12;
+      const note = NOTES[newIndex];
+      return song.key.includes('m') ? note + 'm' : note;
+    });
+  };
+
+  const handleTranspose = (semitones: number) => {
+    setTransposition(prev => prev + semitones);
+  };
+
+  const handleKeyChange = (targetKey: string) => {
+    const baseKey = song.key.replace('m', '');
+    const targetBase = targetKey.replace('m', '');
+    const baseIndex = NOTES.indexOf(baseKey);
+    const targetIndex = NOTES.indexOf(targetBase);
+    
+    if (baseIndex !== -1 && targetIndex !== -1) {
+      const semitones = targetIndex - baseIndex;
+      setTransposition(semitones);
+    }
+  };
+
   const renderLyrics = () => {
     const lines = transposedLyrics.split('\n');
     const elements: JSX.Element[] = [];
@@ -611,6 +654,72 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           <div><span className="text-sm font-semibold mb-2 block">Capo de Guitarra</span><div className="flex items-center gap-2"><button onClick={() => setCapo(Math.max(0, preferences.capo - 1))} className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>−</button><div className="flex-1 text-center"><span className="text-2xl font-bold">{preferences.capo > 0 ? `${preferences.capo}°` : '—'}</span><span className="text-xs block" style={{ color: 'var(--text-muted)' }}>traste</span></div><button onClick={() => setCapo(Math.min(12, preferences.capo + 1))} className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>+</button></div></div>
         </div>
       )}
+
+      {/* Botones de Transposición */}
+      <div className="flex-shrink-0 mb-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Botón de tono actual */}
+          <button
+            className="px-3 py-1.5 rounded-lg text-sm font-bold transition-all hover:scale-105"
+            style={{ backgroundColor: '#8b5cf6', color: 'white' }}
+            title="Tono actual"
+          >
+            {getCurrentKey()}
+          </button>
+          
+          {/* Botón - */}
+          <button
+            onClick={() => handleTranspose(-1)}
+            className="px-3 py-1.5 rounded-lg text-sm font-bold transition-all hover:scale-105"
+            style={{ backgroundColor: '#8b5cf6', color: 'white' }}
+            title="Bajar medio tono"
+          >
+            −
+          </button>
+          
+          {/* Botón + */}
+          <button
+            onClick={() => handleTranspose(1)}
+            className="px-3 py-1.5 rounded-lg text-sm font-bold transition-all hover:scale-105"
+            style={{ backgroundColor: '#8b5cf6', color: 'white' }}
+            title="Subir medio tono"
+          >
+            +
+          </button>
+
+          {/* Separador */}
+          <div className="w-px h-6 mx-1" style={{ backgroundColor: 'var(--border-color)' }}></div>
+
+          {/* Tonos alternativos */}
+          {getAlternativeKeys().map((altKey, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleKeyChange(altKey)}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
+              style={{ 
+                backgroundColor: getCurrentKey() === altKey ? '#8b5cf6' : 'var(--card-bg)',
+                color: getCurrentKey() === altKey ? 'white' : 'var(--text-primary)',
+                border: `1px solid ${getCurrentKey() === altKey ? '#8b5cf6' : 'var(--border-color)'}`
+              }}
+              title={`Cambiar a ${altKey}`}
+            >
+              {altKey}
+            </button>
+          ))}
+
+          {/* Botón reset si hay transposición */}
+          {transposition !== 0 && (
+            <button
+              onClick={() => setTransposition(0)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105 ml-auto"
+              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
+              title="Volver al tono original"
+            >
+              Original
+            </button>
+          )}
+        </div>
+      </div>
 
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto rounded-2xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
         {sections.length > 0 && (
