@@ -318,9 +318,12 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {allHymnals.map((hymnal) => {
             const hymnalSongs = allAvailableSongs.filter(s => s.hymnalId === hymnal.id);
+            const backgroundStyle = hymnal.image
+              ? { backgroundImage: `linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(${hymnal.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+              : { background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)` };
             return (
               <div key={hymnal.id} className="relative group">
-                <div className="rounded-2xl relative overflow-hidden p-3 sm:p-5 flex flex-col justify-between text-left transition-all hover-lift active:scale-[0.97] w-full cursor-pointer" style={{ aspectRatio: '3/4', background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 8px 24px ${hymnal.color}44, 0 2px 8px rgba(0,0,0,0.1)` }} onClick={() => onSelectHymnal(hymnal)}>
+                <div className="rounded-2xl relative overflow-hidden p-3 sm:p-5 flex flex-col justify-between text-left transition-all hover-lift active:scale-[0.97] w-full cursor-pointer" style={{ aspectRatio: '3/4', ...backgroundStyle, boxShadow: `0 8px 24px ${hymnal.color}44, 0 2px 8px rgba(0,0,0,0.1)` }} onClick={() => onSelectHymnal(hymnal)}>
                   <div><div className="text-4xl sm:text-6xl mb-2 sm:mb-4 drop-shadow-lg">{hymnal.icon}</div><div className="text-white font-bold text-sm sm:text-xl leading-tight mb-1 sm:mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
                   <div><div className="text-white/95 text-xs sm:text-base font-semibold" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/80 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
                 </div>
@@ -601,7 +604,13 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
     <div className="space-y-4 pb-4">
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 rounded-lg card-shadow-sm hover:card-shadow-md transition-shadow" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={20} /></button>
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl card-shadow-lg" style={{ backgroundColor: hymnal.color + '20' }}>{hymnal.icon}</div>
+        {hymnal.image ? (
+          <div className="w-14 h-14 rounded-2xl overflow-hidden card-shadow-lg">
+            <img src={hymnal.image} alt={hymnal.name} className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl card-shadow-lg" style={{ backgroundColor: hymnal.color + '20' }}>{hymnal.icon}</div>
+        )}
         <div className="flex-1"><h2 className="text-lg font-bold">{hymnal.name}</h2><p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hymnalSongs.length} canciones • {hymnal.language}</p></div>
         <button onClick={() => onAddSong(hymnal)} className="p-2.5 rounded-xl card-shadow-md hover:card-shadow-lg transition-all" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={18} /></button>
         <div className="relative">
