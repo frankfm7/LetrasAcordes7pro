@@ -468,6 +468,17 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     if (baseIndex !== -1 && targetIndex !== -1) {
       const semitones = targetIndex - baseIndex;
       setTransposition(semitones);
+      
+      // Guardar el tono seleccionado en la nota personal correspondiente
+      if (editingNote === 'note2') {
+        const updated = { ...personalNotes, note2: targetKey };
+        setPersonalNotes(updated);
+        localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
+      } else if (editingNote === 'note3') {
+        const updated = { ...personalNotes, note3: targetKey };
+        setPersonalNotes(updated);
+        localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
+      }
     }
   };
 
@@ -525,8 +536,19 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
             >
               {song.key}
             </button>
-            {/* Nota Personal 1 - doble clic para seleccionar tono */}
+            {/* Nota Personal 1 - doble clic para seleccionar tono, clic para aplicar */}
             <button
+              onClick={() => {
+                if (personalNotes.note2) {
+                  const baseKey = song.key.replace('m', '');
+                  const targetBase = personalNotes.note2.replace('m', '');
+                  const baseIndex = NOTES.indexOf(baseKey);
+                  const targetIndex = NOTES.indexOf(targetBase);
+                  if (baseIndex !== -1 && targetIndex !== -1) {
+                    setTransposition(targetIndex - baseIndex);
+                  }
+                }
+              }}
               onDoubleClick={() => setEditingNote('note2')}
               className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
               style={{ 
@@ -534,12 +556,23 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 color: personalNotes.note2 ? 'var(--accent)' : 'var(--text-muted)',
                 border: '1px solid var(--border-color)'
               }}
-              title="Doble clic para seleccionar tono"
+              title="Clic para aplicar, doble clic para cambiar"
             >
               {personalNotes.note2 || '—'}
             </button>
-            {/* Nota Personal 2 - doble clic para seleccionar tono */}
+            {/* Nota Personal 2 - doble clic para seleccionar tono, clic para aplicar */}
             <button
+              onClick={() => {
+                if (personalNotes.note3) {
+                  const baseKey = song.key.replace('m', '');
+                  const targetBase = personalNotes.note3.replace('m', '');
+                  const baseIndex = NOTES.indexOf(baseKey);
+                  const targetIndex = NOTES.indexOf(targetBase);
+                  if (baseIndex !== -1 && targetIndex !== -1) {
+                    setTransposition(targetIndex - baseIndex);
+                  }
+                }
+              }}
               onDoubleClick={() => setEditingNote('note3')}
               className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
               style={{ 
@@ -547,7 +580,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 color: personalNotes.note3 ? 'var(--accent)' : 'var(--text-muted)',
                 border: '1px solid var(--border-color)'
               }}
-              title="Doble clic para seleccionar tono"
+              title="Clic para aplicar, doble clic para cambiar"
             >
               {personalNotes.note3 || '—'}
             </button>
