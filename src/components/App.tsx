@@ -16,6 +16,10 @@ import ExportModal from './ExportModal';
 import ToolsMenu from './ToolsMenu';
 import ExportOptions from './ExportOptions';
 import ImportModal from './ImportModal';
+import ProfilePage from './ProfilePage';
+import SongSelectorModal from './SongSelectorModal';
+import MultiSongSelector from './MultiSongSelector';
+import HymnalSelector from './HymnalSelector';
 
 export default function App() {
   return (
@@ -44,6 +48,10 @@ function AppContent() {
   const [addingSongToHymnal, setAddingSongToHymnal] = useState<Hymnal | null>(null);
   const [showToolsMenu, setShowToolsMenu] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [showSongSelector, setShowSongSelector] = useState(false);
+  const [showMultiSongSelector, setShowMultiSongSelector] = useState(false);
+  const [showHymnalSelector, setShowHymnalSelector] = useState(false);
 
   useEffect(() => {
     document.documentElement.className = state.preferences.theme;
@@ -107,12 +115,12 @@ function AppContent() {
   }, [showNotification]);
 
   const handleDeleteHymnal = useCallback((id: string) => {
-    // Eliminar las canciones asociadas al himnario
+    // Eliminar las canciones asociadas al cancionero
     const songsToRemove = state.customSongs.filter(s => s.hymnalId === id);
     songsToRemove.forEach(song => {
       removeCustomSong(song.id);
     });
-    // Eliminar el himnario
+    // Eliminar el cancionero
     removeCustomHymnal(id);
   }, [removeCustomHymnal, removeCustomSong, state.customSongs]);
 
@@ -132,7 +140,19 @@ function AppContent() {
             setShowToolsMenu(false);
             setShowImportModal(true);
           }}
+          onProfileClick={() => {
+            setShowToolsMenu(false);
+            setShowProfilePage(true);
+          }}
         />
+      </Layout>
+    );
+  }
+
+  if (showProfilePage) {
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <ProfilePage onBack={() => setShowProfilePage(false)} />
       </Layout>
     );
   }
@@ -149,20 +169,54 @@ function AppContent() {
           hymnals={allHymnals}
           onExportSingle={() => {
             setShowExportOptions(false);
-            handleNavigate('search');
+            setShowSongSelector(true);
           }}
           onExportMultiple={() => {
             setShowExportOptions(false);
-            // TODO: Implementar selección múltiple global
-            console.log('Exportar múltiples');
+            setShowMultiSongSelector(true);
           }}
-          onExportHymnal={(hymnalId) => {
+          onExportHymnal={() => {
             setShowExportOptions(false);
-            const hymnal = allHymnals.find(h => h.id === hymnalId);
-            if (hymnal) {
-              setSelectedHymnal(hymnal);
-            }
+            setShowHymnalSelector(true);
           }}
+        />
+      </Layout>
+    );
+  }
+
+  if (showSongSelector) {
+    const allAvailableSongs = [...allSongs, ...state.customSongs];
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <SongSelectorModal
+          songs={allAvailableSongs}
+          onClose={() => setShowSongSelector(false)}
+        />
+      </Layout>
+    );
+  }
+
+  if (showMultiSongSelector) {
+    const allAvailableSongs = [...allSongs, ...state.customSongs];
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <MultiSongSelector
+          songs={allAvailableSongs}
+          onClose={() => setShowMultiSongSelector(false)}
+        />
+      </Layout>
+    );
+  }
+
+  if (showHymnalSelector) {
+    const allHymnals = [...hymnals, ...state.customHymnals];
+    const allAvailableSongs = [...allSongs, ...state.customSongs];
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <HymnalSelector
+          hymnals={allHymnals}
+          songs={allAvailableSongs}
+          onClose={() => setShowHymnalSelector(false)}
         />
       </Layout>
     );
@@ -369,8 +423,8 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) 
   const { state } = useApp();
   const allAvailableSongs = useMemo(() => [...allSongs, ...state.customSongs], [state.customSongs]);
   
-  // Combinar himnarios predeterminados con custom, evitando duplicados
-  // Si un himnario predeterminado fue editado, usar la versión custom
+  // Combinar cancioneros predeterminados con custom, evitando duplicados
+  // Si un cancionero predeterminado fue editado, usar la versión custom
   const allHymnals = useMemo(() => {
     const customIds = new Set(state.customHymnals.map(h => h.id));
     const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));

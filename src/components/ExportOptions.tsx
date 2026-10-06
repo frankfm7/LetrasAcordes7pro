@@ -7,7 +7,7 @@ interface ExportOptionsProps {
   hymnals: Hymnal[];
   onExportSingle: () => void;
   onExportMultiple: () => void;
-  onExportHymnal: (hymnalId: string) => void;
+  onExportHymnal: () => void;
 }
 
 export default function ExportOptions({ onClose, songs, hymnals, onExportSingle, onExportMultiple, onExportHymnal }: ExportOptionsProps) {
@@ -55,15 +55,7 @@ export default function ExportOptions({ onClose, songs, hymnals, onExportSingle,
           </button>
 
           <button
-            onClick={() => {
-              // TODO: Mostrar lista de himnarios para seleccionar
-              if (hymnals.length === 1) {
-                onExportHymnal(hymnals[0].id);
-              } else {
-                // Mostrar selector de himnarios
-                console.log('Mostrar selector de himnarios');
-              }
-            }}
+            onClick={onExportHymnal}
             className="w-full p-4 rounded-xl border text-left transition-all hover:scale-[1.02] flex items-center gap-4"
             style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
           >
@@ -71,7 +63,7 @@ export default function ExportOptions({ onClose, songs, hymnals, onExportSingle,
               <BookOpen size={24} style={{ color: 'var(--accent)' }} />
             </div>
             <div className="flex-1">
-              <div className="font-semibold">Exportar himnario completo</div>
+              <div className="font-semibold">Exportar cancionero completo</div>
               <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Todas las canciones de un cancionero</div>
             </div>
           </button>

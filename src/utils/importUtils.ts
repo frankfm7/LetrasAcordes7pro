@@ -161,6 +161,41 @@ export function parseSongFromText(text: string, hymnalId: string): Partial<Song>
   };
 }
 
+// Dividir texto en múltiples canciones usando separadores
+export function splitMultipleSongs(text: string): string[] {
+  // Buscar separadores como "=================", "--------------------", etc.
+  const separators = [
+    /=+/, // Múltiples signos de igual
+    /-+/, // Múltiples guiones
+    /\*+/, // Múltiples asteriscos
+    /_{3,}/, // Múltiples guiones bajos (3 o más)
+  ];
+  
+  let songs = [text];
+  
+  for (const separator of separators) {
+    const newSongs: string[] = [];
+    for (const song of songs) {
+      const parts = song.split(separator).filter(part => part.trim().length > 0);
+      newSongs.push(...parts);
+    }
+    songs = newSongs;
+  }
+  
+  return songs.filter(song => song.trim().length > 0);
+}
+
+// Procesar múltiples canciones desde un archivo
+export function parseMultipleSongsFromText(text: string, hymnalId: string): Partial<Song>[] {
+  const songTexts = splitMultipleSongs(text);
+  
+  if (songTexts.length === 0) {
+    throw new Error('No se encontraron canciones en el archivo');
+  }
+  
+  return songTexts.map(songText => parseSongFromText(songText, hymnalId));
+}
+
 // Importar canción desde archivo de texto
 export async function importFromTxt(file: File, hymnalId: string): Promise<Partial<Song>> {
   const text = await readTextFile(file);

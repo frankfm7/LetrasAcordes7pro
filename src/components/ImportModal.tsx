@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Upload, FileText, File, Image, FileJson } from 'lucide-react';
 import { Hymnal, Song } from '../types';
-import { importFromTxt, importFromWord, importFromPdf, importFromImage, importFromJson } from '../utils/importUtils';
+import { importFromTxt, importFromWord, importFromPdf, importFromImage, importFromJson, parseMultipleSongsFromText } from '../utils/importUtils';
 import { useApp } from '../context/AppContext';
 import { useNotification } from './NotificationProvider';
 
@@ -11,10 +11,10 @@ interface ImportModalProps {
 }
 
 export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
-  const { addCustomSong } = useApp();
+  const { addCustomSong, addMultipleCustomSongs } = useApp();
   const { showNotification } = useNotification();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<Partial<Song> | null>(null);
+  const [previews, setPreviews] = useState<Partial<Song>[]>([]);
   const [selectedHymnalId, setSelectedHymnalId] = useState<string>(hymnals[0]?.id || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,27 +26,32 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
     setSelectedFile(file);
     setIsProcessing(true);
     setError(null);
-    setPreview(null);
+    setPreviews([]);
 
     try {
-      let songData: Partial<Song>;
       const fileType = file.name.toLowerCase();
+      let text = '';
 
       if (fileType.endsWith('.txt')) {
-        songData = await importFromTxt(file, selectedHymnalId);
+        text = await file.text();
       } else if (fileType.endsWith('.docx')) {
-        songData = await importFromWord(file, selectedHymnalId);
+        text = await importFromWord(file, selectedHymnalId).then(s => s.lyrics || '');
       } else if (fileType.endsWith('.pdf')) {
-        songData = await importFromPdf(file, selectedHymnalId);
+        text = await importFromPdf(file, selectedHymnalId).then(s => s.lyrics || '');
       } else if (fileType.endsWith('.json')) {
-        songData = await importFromJson(file);
+        const songData = await importFromJson(file);
+        setPreviews([songData]);
+        setIsProcessing(false);
+        return;
       } else if (fileType.match(/\.(jpg|jpeg|png)$/)) {
-        songData = await importFromImage(file, selectedHymnalId);
+        text = await importFromImage(file, selectedHymnalId).then(s => s.lyrics || '');
       } else {
         throw new Error('Formato de archivo no soportado');
       }
 
-      setPreview(songData);
+      // Intentar dividir en múltiples canciones
+      const songsData = parseMultipleSongsFromText(text, selectedHymnalId);
+      setPreviews(songsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al procesar el archivo');
     } finally {
@@ -55,14 +60,14 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
   };
 
   const handleImport = () => {
-    if (!preview || !selectedFile) return;
+    if (previews.length === 0 || !selectedFile) return;
 
     try {
-      const newSong: Song = {
-        id: `custom-${Date.now()}`,
+      const newSongs: Song[] = previews.map((preview, index) => ({
+        id: `custom-${Date.now()}-${index}`,
         title: preview.title || 'Sin título',
         artist: preview.artist || 'Desconocido',
-        code: `IMP${Date.now()}`,
+        code: `IMP${Date.now()}-${index}`,
         hymnalId: selectedHymnalId,
         key: preview.key || 'C',
         timeSignature: preview.timeSignature || '4/4',
@@ -72,10 +77,15 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
         sections: preview.sections || [],
         lyrics: preview.lyrics || '',
         notes: preview.notes || '',
-      };
+      }));
 
-      addCustomSong(newSong);
-      showNotification('Canción importada exitosamente', 'success');
+      if (newSongs.length === 1) {
+        addCustomSong(newSongs[0]);
+      } else {
+        addMultipleCustomSongs(newSongs);
+      }
+
+      showNotification(`${newSongs.length} canción${newSongs.length > 1 ? 'es' : ''} importada${newSongs.length > 1 ? 's' : ''} exitosamente`, 'success');
       onClose();
     } catch (err) {
       showNotification('Error al importar la canción', 'error');
@@ -97,7 +107,7 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
         </div>
 
         <div className="space-y-4">
-          {/* Selector de himnario */}
+          {/* Selector de cancionero */}
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
               Importar a cancionero
@@ -151,27 +161,40 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
           )}
 
           {/* Preview */}
-          {preview && !isProcessing && (
+          {previews.length > 0 && !isProcessing && (
             <div className="space-y-3">
-              <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                <h4 className="font-bold text-lg mb-1">{preview.title}</h4>
-                <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>{preview.artist}</p>
-                <div className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-                  Tono: {preview.key} | Compás: {preview.timeSignature} | BPM: {preview.bpm}
-                </div>
-                <div className="text-xs p-2 rounded-lg max-h-32 overflow-y-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <pre className="whitespace-pre-wrap font-mono text-[10px]">
-                    {preview.lyrics?.substring(0, 200)}...
-                  </pre>
-                </div>
+              <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--accent-light)', border: '1px solid var(--accent)' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>
+                  {previews.length} canción{previews.length > 1 ? 'es' : ''} detectada{previews.length > 1 ? 's' : ''}
+                </p>
               </div>
+
+              {previews.map((preview, index) => (
+                <div key={index} className="p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold px-2 py-1 rounded" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
+                      #{index + 1}
+                    </span>
+                    <h4 className="font-bold text-lg">{preview.title}</h4>
+                  </div>
+                  <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>{preview.artist}</p>
+                  <div className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                    Tono: {preview.key} | Compás: {preview.timeSignature} | BPM: {preview.bpm}
+                  </div>
+                  <div className="text-xs p-2 rounded-lg max-h-24 overflow-y-auto" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                    <pre className="whitespace-pre-wrap font-mono text-[10px]">
+                      {preview.lyrics?.substring(0, 150)}...
+                    </pre>
+                  </div>
+                </div>
+              ))}
 
               <button
                 onClick={handleImport}
                 className="w-full py-3 rounded-xl text-sm font-bold"
                 style={{ backgroundColor: 'var(--accent)', color: 'white' }}
               >
-                Importar canción
+                Importar {previews.length} canción{previews.length > 1 ? 'es' : ''}
               </button>
             </div>
           )}

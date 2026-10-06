@@ -130,7 +130,7 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
           {/* Nombre */}
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Nombre *</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Himnario Adventista"
+            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Cancionero de Alabanza"
                    className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} autoFocus />
           </div>
 

@@ -5,9 +5,10 @@ interface ToolsMenuProps {
   onNavigate: (page: string) => void;
   onExportClick: () => void;
   onImportClick: () => void;
+  onProfileClick: () => void;
 }
 
-export default function ToolsMenu({ onClose, onNavigate, onExportClick, onImportClick }: ToolsMenuProps) {
+export default function ToolsMenu({ onClose, onNavigate, onExportClick, onImportClick, onProfileClick }: ToolsMenuProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
       <div 
@@ -26,8 +27,7 @@ export default function ToolsMenu({ onClose, onNavigate, onExportClick, onImport
           <button
             onClick={() => {
               onClose();
-              // TODO: Implementar pantalla de perfil
-              console.log('Ver perfil');
+              onProfileClick();
             }}
             className="w-full p-4 rounded-xl border text-left transition-all hover:scale-[1.02] flex items-center gap-4"
             style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}
