@@ -402,8 +402,9 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
 
   const transposedLyrics = useMemo(() => {
     let lyrics = song.lyricsByLanguage?.[currentLanguage] || song.lyrics;
-    if (preferences.capo > 0) lyrics = transposeLyrics(lyrics, -preferences.capo);
+    // Aplicar transposición primero, luego capo
     if (transposition !== 0) lyrics = transposeLyrics(lyrics, transposition);
+    if (preferences.capo > 0) lyrics = transposeLyrics(lyrics, -preferences.capo);
     return lyrics;
   }, [song.lyrics, song.lyricsByLanguage, currentLanguage, transposition, preferences.capo]);
 
@@ -574,13 +575,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               onClick={() => {
                 const note2Formatted = formatNote(personalNotes.note2);
                 if (note2Formatted) {
-                  const baseKey = song.key.replace('m', '');
-                  const targetBase = note2Formatted.replace('m', '');
-                  const baseIndex = NOTES.indexOf(baseKey);
-                  const targetIndex = NOTES.indexOf(targetBase);
-                  if (baseIndex !== -1 && targetIndex !== -1) {
-                    setTransposition(targetIndex - baseIndex);
-                  }
+                  handleKeyChange(note2Formatted);
                 }
               }}
               onDoubleClick={() => setEditingNote('note2')}
@@ -599,13 +594,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               onClick={() => {
                 const note3Formatted = formatNote(personalNotes.note3);
                 if (note3Formatted) {
-                  const baseKey = song.key.replace('m', '');
-                  const targetBase = note3Formatted.replace('m', '');
-                  const baseIndex = NOTES.indexOf(baseKey);
-                  const targetIndex = NOTES.indexOf(targetBase);
-                  if (baseIndex !== -1 && targetIndex !== -1) {
-                    setTransposition(targetIndex - baseIndex);
-                  }
+                  handleKeyChange(note3Formatted);
                 }
               }}
               onDoubleClick={() => setEditingNote('note3')}
@@ -775,13 +764,24 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
 
   // Cerrar menú al hacer clic fuera
   useEffect(() => {
-    const handleClickOutside = () => {
-      setShowSelectionMenu(false);
+    if (!showSelectionMenu) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-selection-menu]')) {
+        setShowSelectionMenu(false);
+      }
     };
-    if (showSelectionMenu) {
+    
+    // Usar setTimeout para evitar que el click actual cierre el menú
+    const timer = setTimeout(() => {
       document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
+    }, 0);
+    
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClickOutside);
+    };
   }, [showSelectionMenu]);
 
   // Toggle modo de selección
@@ -911,9 +911,21 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
           </button>
         )}
         
+        {/* Botón de seleccionar todo - visible en modo selección */}
+        {selectionMode && (
+          <button 
+            onClick={toggleSelectAll}
+            className="px-3 py-2 rounded-xl card-shadow-sm hover:card-shadow-md transition-all text-xs font-semibold" 
+            style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
+            title={selectedSongs.length === hymnalSongs.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
+          >
+            {selectedSongs.length === hymnalSongs.length ? 'Deseleccionar' : 'Seleccionar todo'}
+          </button>
+        )}
+        
         {/* Menú de acciones de selección múltiple - visible en modo selección */}
         {selectionMode && (
-          <div className="relative">
+          <div className="relative" data-selection-menu>
             <button 
               onClick={(e) => { e.stopPropagation(); setShowSelectionMenu(!showSelectionMenu); }} 
               className="p-2.5 rounded-xl card-shadow-md hover:card-shadow-lg transition-all" 
@@ -922,7 +934,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
               <MoreVertical size={18} />
             </button>
             {showSelectionMenu && (
-              <div onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+              <div className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
                 <button onClick={() => toggleSelectAll()} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
                   <CheckSquare size={14} /> {selectedSongs.length === hymnalSongs.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
                 </button>
@@ -974,9 +986,13 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
                     checked={isSelected}
                     onChange={(e) => {
                       e.stopPropagation();
+                      e.nativeEvent.stopImmediatePropagation();
                       toggleSongSelection(song.id);
                     }}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.nativeEvent.stopImmediatePropagation();
+                    }}
                     className="w-5 h-5 rounded cursor-pointer accent-purple-600 flex-shrink-0"
                   />
                 )}
