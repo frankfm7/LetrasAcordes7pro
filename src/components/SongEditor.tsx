@@ -139,11 +139,6 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
           <h2 className="text-xl font-bold">{isNewSong ? 'Nueva Canción' : 'Editar Canción'}</h2>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{song.code}</p>
         </div>
-        {!isNewSong && (
-          <button onClick={handleDelete} className="p-2 rounded-xl text-red-500" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-            <Trash2 size={20} />
-          </button>
-        )}
       </div>
 
       <div className="space-y-4">
