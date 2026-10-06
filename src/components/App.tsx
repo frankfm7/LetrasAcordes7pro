@@ -157,20 +157,20 @@ function AppContent() {
   if (selectedHymnal) {
     return (
       <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
-        <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onAddSong={(h: Hymnal) => setAddingSongToHymnal(h)} />
+        <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onAddSong={(h: Hymnal) => setAddingSongToHymnal(h)} onDeleteHymnal={handleDeleteHymnal} showNotification={showNotification} />
       </Layout>
     );
   }
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'home': return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} onAddHymnal={() => setShowAddHymnalModal(true)} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onDeleteHymnal={handleDeleteHymnal} showNotification={showNotification} />;
+      case 'home': return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} onAddHymnal={() => setShowAddHymnalModal(true)} />;
       case 'search': return <SearchPage onSelectSong={handleSelectSong} />;
       case 'favorites': return <FavoritesPage onSelectSong={handleSelectSong} />;
       case 'setlists': return <SetlistsPage onSelectSong={handleSelectSong} showNotification={showNotification} />;
       case 'orders': return <OrdersPage onSelectSong={handleSelectSong} showNotification={showNotification} />;
       case 'tools': return <ToolsPage />;
-      default: return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} onAddHymnal={() => setShowAddHymnalModal(true)} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onDeleteHymnal={handleDeleteHymnal} showNotification={showNotification} />;
+      default: return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} onAddHymnal={() => setShowAddHymnalModal(true)} />;
     }
   };
 
@@ -293,9 +293,8 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
   );
 }
 
-function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal, onEditHymnal, onDeleteHymnal, showNotification }: any) {
+function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) {
   const { state } = useApp();
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const allAvailableSongs = useMemo(() => [...allSongs, ...state.customSongs], [state.customSongs]);
   
   // Combinar himnarios predeterminados con custom, evitando duplicados
@@ -305,62 +304,6 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal, onEditH
     const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
     return [...defaultNotEdited, ...state.customHymnals];
   }, [state.customHymnals]);
-
-  // Cerrar menú al hacer clic fuera
-  useEffect(() => {
-    const handleClickOutside = () => setMenuOpenId(null);
-    if (menuOpenId) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [menuOpenId]);
-
-  const handleMenuAction = (action: string, hymnal: Hymnal) => {
-    setMenuOpenId(null);
-    switch (action) {
-      case 'edit':
-        onEditHymnal(hymnal);
-        break;
-      case 'delete':
-        if (confirm(`¿Eliminar el cancionero "${hymnal.name}"? Esta acción no se puede deshacer.`)) {
-          onDeleteHymnal(hymnal.id);
-          showNotification('Cancionero eliminado', 'success');
-        }
-        break;
-      case 'import':
-        showNotification('Importar canciones (próximamente)', 'info');
-        break;
-      case 'export':
-        const hymnalSongs = allAvailableSongs.filter(s => s.hymnalId === hymnal.id);
-        if (hymnalSongs.length === 0) {
-          showNotification('No hay canciones para exportar', 'error');
-          return;
-        }
-        const data = JSON.stringify(hymnalSongs, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${hymnal.name.replace(/\s+/g, '_')}_backup.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showNotification('Cancionero exportado', 'success');
-        break;
-      case 'capture':
-        showNotification('Capturar imagen (próximamente)', 'info');
-        break;
-      case 'share':
-        const hymnalSongsForShare = allAvailableSongs.filter(s => s.hymnalId === hymnal.id);
-        const shareText = `Cancionero: ${hymnal.name}\n${hymnalSongsForShare.length} canciones\n\n${hymnalSongsForShare.map(s => `- ${s.title}`).join('\n')}`;
-        if (navigator.share) {
-          navigator.share({ title: hymnal.name, text: shareText });
-        } else {
-          navigator.clipboard.writeText(shareText);
-          showNotification('Información copiada', 'success');
-        }
-        break;
-    }
-  };
 
   return (
     <div className="space-y-6 pb-4">
@@ -377,21 +320,6 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal, onEditH
                 <div className="rounded-2xl relative overflow-hidden p-3 sm:p-5 flex flex-col justify-between text-left transition-all hover-lift active:scale-[0.97] w-full cursor-pointer" style={{ aspectRatio: '3/4', background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 8px 24px ${hymnal.color}44, 0 2px 8px rgba(0,0,0,0.1)` }} onClick={() => onSelectHymnal(hymnal)}>
                   <div><div className="text-4xl sm:text-6xl mb-2 sm:mb-4 drop-shadow-lg">{hymnal.icon}</div><div className="text-white font-bold text-sm sm:text-xl leading-tight mb-1 sm:mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
                   <div><div className="text-white/95 text-xs sm:text-base font-semibold" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/80 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
-                  <div className="absolute top-2 right-2">
-                    <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === hymnal.id ? null : hymnal.id); }} className="p-2 rounded-xl bg-black/40 backdrop-blur-sm text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 card-shadow-md">
-                      <MoreVertical size={14} />
-                    </button>
-                    {menuOpenId === hymnal.id && (
-                      <div onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-                        <button onClick={() => handleMenuAction('edit', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
-                        <button onClick={() => handleMenuAction('delete', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80 text-red-500"><Trash2 size={14} /> Eliminar</button>
-                        <button onClick={() => handleMenuAction('import', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
-                        <button onClick={() => handleMenuAction('export', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
-                        <button onClick={() => handleMenuAction('capture', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Camera size={14} /> Capturar imagen</button>
-                        <button onClick={() => handleMenuAction('share', hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             );
@@ -413,6 +341,15 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialSong.language.split('/')[0]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
+
+  // Cerrar menú de acciones al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = () => setShowActionsMenu(false);
+    if (showActionsMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showActionsMenu]);
 
   const song = useMemo(() => {
     const customSong = state.customSongs.find(s => s.id === initialSong.id);
@@ -523,6 +460,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
               <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
               <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
+              <button onClick={() => { showNotification('Importar canción (próximamente)', 'info'); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
               <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
             </div>
           )}
@@ -593,12 +531,68 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   );
 }
 
-function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong }: any) {
+function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onDeleteHymnal, showNotification }: any) {
   const { state, toggleFavorite, isFavorite } = useApp();
+  const [showHymnalMenu, setShowHymnalMenu] = useState(false);
 
   const hymnalSongs = useMemo(() => {
     return [...allSongs, ...state.customSongs].filter(s => s.hymnalId === hymnal.id);
   }, [hymnal.id, state.customSongs]);
+
+  // Cerrar menú al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = () => setShowHymnalMenu(false);
+    if (showHymnalMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showHymnalMenu]);
+
+  const handleHymnalMenuAction = (action: string) => {
+    setShowHymnalMenu(false);
+    switch (action) {
+      case 'edit':
+        onEditHymnal(hymnal);
+        break;
+      case 'delete':
+        if (confirm(`¿Eliminar el cancionero "${hymnal.name}"? Esta acción no se puede deshacer.`)) {
+          onDeleteHymnal(hymnal.id);
+          showNotification('Cancionero eliminado', 'success');
+          onBack();
+        }
+        break;
+      case 'import':
+        showNotification('Importar canciones (próximamente)', 'info');
+        break;
+      case 'export':
+        if (hymnalSongs.length === 0) {
+          showNotification('No hay canciones para exportar', 'error');
+          return;
+        }
+        const data = JSON.stringify(hymnalSongs, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${hymnal.name.replace(/\s+/g, '_')}_backup.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification('Cancionero exportado', 'success');
+        break;
+      case 'capture':
+        showNotification('Capturar imagen (próximamente)', 'info');
+        break;
+      case 'share':
+        const shareText = `Cancionero: ${hymnal.name}\n${hymnalSongs.length} canciones\n\n${hymnalSongs.map(s => `- ${s.title}`).join('\n')}`;
+        if (navigator.share) {
+          navigator.share({ title: hymnal.name, text: shareText });
+        } else {
+          navigator.clipboard.writeText(shareText);
+          showNotification('Información copiada', 'success');
+        }
+        break;
+    }
+  };
 
   return (
     <div className="space-y-4 pb-4">
@@ -606,8 +600,20 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong }: a
         <button onClick={onBack} className="p-2 rounded-lg card-shadow-sm hover:card-shadow-md transition-shadow" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={20} /></button>
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl card-shadow-lg" style={{ backgroundColor: hymnal.color + '20' }}>{hymnal.icon}</div>
         <div className="flex-1"><h2 className="text-lg font-bold">{hymnal.name}</h2><p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hymnalSongs.length} canciones • {hymnal.language}</p></div>
-        <button onClick={() => onEditHymnal(hymnal)} className="p-2.5 rounded-xl card-shadow-sm hover:card-shadow-md transition-all" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Edit3 size={18} /></button>
         <button onClick={() => onAddSong(hymnal)} className="p-2.5 rounded-xl card-shadow-md hover:card-shadow-lg transition-all" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={18} /></button>
+        <div className="relative">
+          <button onClick={() => setShowHymnalMenu(!showHymnalMenu)} className="p-2.5 rounded-xl card-shadow-sm hover:card-shadow-md transition-all" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={18} /></button>
+          {showHymnalMenu && (
+            <div onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+              <button onClick={() => handleHymnalMenuAction('edit')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
+              <button onClick={() => handleHymnalMenuAction('delete')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80 text-red-500"><Trash2 size={14} /> Eliminar</button>
+              <button onClick={() => handleHymnalMenuAction('import')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
+              <button onClick={() => handleHymnalMenuAction('export')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
+              <button onClick={() => handleHymnalMenuAction('capture')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Camera size={14} /> Capturar imagen</button>
+              <button onClick={() => handleHymnalMenuAction('share')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
+            </div>
+          )}
+        </div>
       </div>
       <div className="space-y-2">
         {hymnalSongs.map(song => (
