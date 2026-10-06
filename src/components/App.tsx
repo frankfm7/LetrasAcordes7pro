@@ -356,6 +356,14 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   const [currentLanguage, setCurrentLanguage] = useState<string>(initialSong.language.split('/')[0]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
+  
+  // Estados para las notas personales
+  const [personalNotes, setPersonalNotes] = useState<{ note2: string; note3: string }>(() => {
+    const saved = localStorage.getItem(`song-notes-${initialSong.id}`);
+    return saved ? JSON.parse(saved) : { note2: '', note3: '' };
+  });
+  const [editingNote, setEditingNote] = useState<'note2' | 'note3' | null>(null);
+  const [showOriginalNote, setShowOriginalNote] = useState(true);
 
   // Cerrar menú de acciones al hacer clic fuera
   useEffect(() => {
@@ -429,6 +437,15 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     else { navigator.clipboard.writeText(text); showNotification('Copiado', 'success'); }
   };
 
+  // Función para guardar notas personales
+  const savePersonalNote = (noteKey: 'note2' | 'note3', value: string) => {
+    const updated = { ...personalNotes, [noteKey]: value };
+    setPersonalNotes(updated);
+    localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
+    setEditingNote(null);
+    showNotification('Nota guardada', 'success');
+  };
+
   const renderLyrics = () => {
     const lines = transposedLyrics.split('\n');
     const elements: JSX.Element[] = [];
@@ -477,6 +494,119 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
               <button onClick={() => { showNotification('Importar canción (próximamente)', 'info'); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Upload size={14} /> Importar</button>
               <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sección de Notas */}
+      <div className="flex-shrink-0 space-y-2 mb-3">
+        {/* Nota 1: Nota Original */}
+        {song.notes && (
+          <div 
+            onClick={() => setShowOriginalNote(!showOriginalNote)}
+            className="rounded-xl border p-3 cursor-pointer transition-all hover:scale-[1.01]"
+            style={{ 
+              backgroundColor: showOriginalNote ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+              borderColor: showOriginalNote ? 'var(--accent)' : 'var(--border-color)'
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold" style={{ color: 'var(--accent)' }}>📝 Nota Original</span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({showOriginalNote ? 'clic para ocultar' : 'clic para mostrar'})</span>
+            </div>
+            {showOriginalNote && (
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{song.notes}</p>
+            )}
+          </div>
+        )}
+
+        {/* Nota 2: Personal Editable */}
+        <div className="rounded-xl border p-3" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>📌 Nota Personal 1</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(doble clic para editar)</span>
+          </div>
+          {editingNote === 'note2' ? (
+            <div className="space-y-2">
+              <textarea
+                value={personalNotes.note2}
+                onChange={(e) => setPersonalNotes({ ...personalNotes, note2: e.target.value })}
+                className="w-full p-2 rounded-lg border text-sm resize-none"
+                rows={3}
+                autoFocus
+                placeholder="Escribe tu nota aquí..."
+                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => savePersonalNote('note2', personalNotes.note2)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                >
+                  Guardar
+                </button>
+                <button
+                  onClick={() => setEditingNote(null)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onDoubleClick={() => setEditingNote('note2')}
+              className="text-sm min-h-[20px] cursor-text"
+              style={{ color: personalNotes.note2 ? 'var(--text-primary)' : 'var(--text-muted)' }}
+            >
+              {personalNotes.note2 || 'Doble clic para agregar una nota...'}
+            </div>
+          )}
+        </div>
+
+        {/* Nota 3: Personal Editable */}
+        <div className="rounded-xl border p-3" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>📌 Nota Personal 2</span>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>(doble clic para editar)</span>
+          </div>
+          {editingNote === 'note3' ? (
+            <div className="space-y-2">
+              <textarea
+                value={personalNotes.note3}
+                onChange={(e) => setPersonalNotes({ ...personalNotes, note3: e.target.value })}
+                className="w-full p-2 rounded-lg border text-sm resize-none"
+                rows={3}
+                autoFocus
+                placeholder="Escribe tu nota aquí..."
+                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => savePersonalNote('note3', personalNotes.note3)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+                >
+                  Guardar
+                </button>
+                <button
+                  onClick={() => setEditingNote(null)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onDoubleClick={() => setEditingNote('note3')}
+              className="text-sm min-h-[20px] cursor-text"
+              style={{ color: personalNotes.note3 ? 'var(--text-primary)' : 'var(--text-muted)' }}
+            >
+              {personalNotes.note3 || 'Doble clic para agregar una nota...'}
             </div>
           )}
         </div>
