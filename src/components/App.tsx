@@ -755,6 +755,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
+  const [showHymnalMenu, setShowHymnalMenu] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
   const hymnalSongs = useMemo(() => {
@@ -770,12 +771,13 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
 
   // Cerrar menú al hacer clic fuera
   useEffect(() => {
-    if (!showSelectionMenu) return;
+    if (!showSelectionMenu && !showHymnalMenu) return;
     
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('[data-selection-menu]')) {
+      if (!target.closest('[data-selection-menu]') && !target.closest('[data-hymnal-menu]')) {
         setShowSelectionMenu(false);
+        setShowHymnalMenu(false);
       }
     };
     
@@ -788,7 +790,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
       clearTimeout(timer);
       document.removeEventListener('click', handleClickOutside);
     };
-  }, [showSelectionMenu]);
+  }, [showSelectionMenu, showHymnalMenu]);
 
   // Toggle modo de selección
   const toggleSelectionMode = () => {
@@ -928,6 +930,67 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
             {selectedSongs.length === hymnalSongs.length ? 'Deseleccionar' : 'Seleccionar todo'}
           </button>
         )}
+        
+        {/* Menú de acciones del cancionero - siempre visible */}
+        <div className="relative" data-hymnal-menu>
+          <button 
+            onClick={(e) => { e.stopPropagation(); setShowHymnalMenu(!showHymnalMenu); }} 
+            className="p-2.5 rounded-xl card-shadow-sm hover:card-shadow-md transition-all" 
+            style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          >
+            <MoreVertical size={18} />
+          </button>
+          {showHymnalMenu && (
+            <div onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
+              <button onClick={() => onEditHymnal(hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
+                <Edit3 size={14} /> Editar
+              </button>
+              <button onClick={() => {
+                if (confirm(`¿Eliminar el cancionero "${hymnal.name}"? Esta acción no se puede deshacer.`)) {
+                  onDeleteHymnal(hymnal.id);
+                  showNotification('Cancionero eliminado', 'success');
+                  onBack();
+                }
+              }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80 text-red-500">
+                <Trash2 size={14} /> Eliminar
+              </button>
+              <button onClick={() => showNotification('Importar canciones (próximamente)', 'info')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
+                <Upload size={14} /> Importar
+              </button>
+              <button onClick={() => {
+                if (hymnalSongs.length === 0) {
+                  showNotification('No hay canciones para exportar', 'error');
+                  return;
+                }
+                const data = JSON.stringify(hymnalSongs, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${hymnal.name.replace(/\s+/g, '_')}_backup.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showNotification('Cancionero exportado', 'success');
+              }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
+                <Download size={14} /> Exportar
+              </button>
+              <button onClick={() => showNotification('Capturar imagen (próximamente)', 'info')} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
+                <Camera size={14} /> Capturar imagen
+              </button>
+              <button onClick={() => {
+                const shareText = `Cancionero: ${hymnal.name}\n${hymnalSongs.length} canciones\n\n${hymnalSongs.map(s => `- ${s.title}`).join('\n')}`;
+                if (navigator.share) {
+                  navigator.share({ title: hymnal.name, text: shareText });
+                } else {
+                  navigator.clipboard.writeText(shareText);
+                  showNotification('Información copiada', 'success');
+                }
+              }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
+                <Share2 size={14} /> Compartir
+              </button>
+            </div>
+          )}
+        </div>
         
         {/* Menú de acciones de selección múltiple - visible en modo selección */}
         {selectionMode && (
