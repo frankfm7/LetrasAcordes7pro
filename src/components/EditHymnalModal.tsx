@@ -78,18 +78,21 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
     if (!name.trim()) return;
     
     const prefix = codePrefix.trim() || hymnal.id.charAt(0).toUpperCase();
+    const oldPrefix = hymnal.codePrefix || hymnal.id.charAt(0).toUpperCase();
     
-    // Validar que el prefijo no esté en uso por otro cancionero
-    if (isPrefixInUse) {
+    // Validar que el prefijo no esté en uso por otro cancionero (solo si cambió)
+    if (prefix !== oldPrefix && isPrefixInUse) {
       showNotification('Prefijo ya usado por otro cancionero. Seleccione otro prefijo.', 'error');
       return;
     }
     
     // Si el prefijo cambió, actualizar los códigos de las canciones asociadas
-    const oldPrefix = hymnal.codePrefix || hymnal.id.charAt(0).toUpperCase();
     if (prefix !== oldPrefix) {
-      const hymnalSongs = state.customSongs.filter(s => s.hymnalId === hymnal.id);
-      hymnalSongs.forEach(song => {
+      // Obtener todas las canciones del cancionero (incluyendo las predeterminadas)
+      const allHymnalSongs = [...state.customSongs.filter(s => s.hymnalId === hymnal.id)];
+      
+      // Actualizar las canciones customSongs
+      allHymnalSongs.forEach(song => {
         // Extraer el número del código antiguo
         const numberMatch = song.code.match(/(\d+)$/);
         const number = numberMatch ? numberMatch[1] : '1';
@@ -98,6 +101,8 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
         // Actualizar la canción con el nuevo código
         updateCustomSong({ ...song, code: newCode });
       });
+      
+      showNotification(`Prefijo actualizado de ${oldPrefix} a ${prefix}`, 'success');
     }
     
     const updatedHymnal: Hymnal = {

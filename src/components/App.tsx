@@ -308,6 +308,15 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) 
     return [...defaultNotEdited, ...state.customHymnals];
   }, [state.customHymnals]);
 
+  // Función para calcular el código dinámicamente basado en el prefijo del cancionero
+  const getDisplayCode = (song: any) => {
+    const hymnal = allHymnals.find(h => h.id === song.hymnalId);
+    if (!hymnal) return song.code;
+    const prefix = hymnal.codePrefix || hymnal.id.charAt(0).toUpperCase();
+    const number = song.number || song.code.match(/(\d+)$/)?.[1] || '1';
+    return `${prefix}${number}`;
+  };
+
   return (
     <div className="space-y-6 pb-4">
       <section>
@@ -545,6 +554,13 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
     return [...allSongs, ...state.customSongs].filter(s => s.hymnalId === hymnal.id);
   }, [hymnal.id, state.customSongs]);
 
+  // Función para calcular el código dinámicamente basado en el prefijo del cancionero
+  const getDisplayCode = (song: any) => {
+    const prefix = hymnal.codePrefix || hymnal.id.charAt(0).toUpperCase();
+    const number = song.number || song.code.match(/(\d+)$/)?.[1] || '1';
+    return `${prefix}${number}`;
+  };
+
   // Cerrar menú al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = () => setShowHymnalMenu(false);
@@ -631,7 +647,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
         {hymnalSongs.map(song => (
           <div key={song.id} className="flex items-center gap-3 p-3 rounded-xl border card-shadow-sm hover:card-shadow-md transition-all hover-lift" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
             <button onClick={() => onSelectSong(song)} className="flex-1 text-left">
-              <div className="flex items-center gap-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{song.code}</span><span className="font-medium text-sm">{song.title}</span></div>
+              <div className="flex items-center gap-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{getDisplayCode(song)}</span><span className="font-medium text-sm">{song.title}</span></div>
               <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.timeSignature} • {song.bpm} BPM</div>
             </button>
             <button onClick={() => toggleFavorite(song.id)} className="p-2 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={18} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
@@ -647,11 +663,22 @@ function SearchPage({ onSelectSong }: any) {
   const { state, toggleFavorite, isFavorite } = useApp();
   const [query, setQuery] = useState('');
   const allAvailableSongs = useMemo(() => [...allSongs, ...state.customSongs], [state.customSongs]);
+  const allHymnals = useMemo(() => [...hymnals, ...state.customHymnals], [state.customHymnals]);
+  
   const filteredSongs = useMemo(() => {
     if (!query) return [];
     const q = query.toLowerCase();
     return allAvailableSongs.filter(song => song.title.toLowerCase().includes(q) || song.artist.toLowerCase().includes(q) || song.code.toLowerCase().includes(q) || song.lyrics.toLowerCase().includes(q));
   }, [query, allAvailableSongs]);
+
+  // Función para calcular el código dinámicamente basado en el prefijo del cancionero
+  const getDisplayCode = (song: any) => {
+    const hymnal = allHymnals.find(h => h.id === song.hymnalId);
+    if (!hymnal) return song.code;
+    const prefix = hymnal.codePrefix || hymnal.id.charAt(0).toUpperCase();
+    const number = song.number || song.code.match(/(\d+)$/)?.[1] || '1';
+    return `${prefix}${number}`;
+  };
 
   return (
     <div className="space-y-4 pb-4">
@@ -667,7 +694,7 @@ function SearchPage({ onSelectSong }: any) {
           {filteredSongs.map((song) => (
             <div key={song.id} className="flex items-center gap-3 p-4 rounded-2xl border transition-all hover:scale-[1.01]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
               <button onClick={() => onSelectSong(song)} className="flex-1 text-left">
-                <div className="flex items-center gap-2 mb-1"><span className="text-xs font-mono px-2 py-0.5 rounded-lg font-bold" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>{song.code}</span><span className="font-bold text-base">{song.title}</span></div>
+                <div className="flex items-center gap-2 mb-1"><span className="text-xs font-mono px-2 py-0.5 rounded-lg font-bold" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>{getDisplayCode(song)}</span><span className="font-bold text-base">{song.title}</span></div>
                 <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.timeSignature} • {song.bpm} BPM</div>
               </button>
               <button onClick={() => toggleFavorite(song.id)} className="p-2.5 rounded-xl" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={20} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
@@ -682,6 +709,16 @@ function SearchPage({ onSelectSong }: any) {
 function FavoritesPage({ onSelectSong }: any) {
   const { state, toggleFavorite } = useApp();
   const favoriteSongs = useMemo(() => [...allSongs, ...state.customSongs].filter(s => state.favorites.includes(s.id)), [state.favorites, state.customSongs]);
+  const allHymnals = useMemo(() => [...hymnals, ...state.customHymnals], [state.customHymnals]);
+
+  // Función para calcular el código dinámicamente basado en el prefijo del cancionero
+  const getDisplayCode = (song: any) => {
+    const hymnal = allHymnals.find(h => h.id === song.hymnalId);
+    if (!hymnal) return song.code;
+    const prefix = hymnal.codePrefix || hymnal.id.charAt(0).toUpperCase();
+    const number = song.number || song.code.match(/(\d+)$/)?.[1] || '1';
+    return `${prefix}${number}`;
+  };
 
   return (
     <div className="space-y-4 pb-4">
@@ -691,7 +728,7 @@ function FavoritesPage({ onSelectSong }: any) {
           {favoriteSongs.map(song => (
             <div key={song.id} className="flex items-center gap-3 p-3 rounded-xl border transition-all hover:scale-[1.01]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
               <button onClick={() => onSelectSong(song)} className="flex-1 text-left">
-                <div className="flex items-center gap-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{song.code}</span><span className="font-medium text-sm">{song.title}</span></div>
+                <div className="flex items-center gap-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{getDisplayCode(song)}</span><span className="font-medium text-sm">{song.title}</span></div>
                 <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.language}</div>
               </button>
               <button onClick={() => toggleFavorite(song.id)} className="p-2 rounded-lg" style={{ color: 'var(--gold)' }}><Star size={18} fill="currentColor" /></button>
