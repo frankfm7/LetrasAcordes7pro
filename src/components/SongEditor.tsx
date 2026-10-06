@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Save, Trash2 } from 'lucide-react';
+import { ChevronLeft, Save, Trash2, Plus, X } from 'lucide-react';
 import { Song } from '../types';
 import { useApp } from '../context/AppContext';
 import { useNotification } from './NotificationProvider';
@@ -20,13 +20,18 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
   const [key, setKey] = useState(song.key);
   const [timeSignature, setTimeSignature] = useState(song.timeSignature);
   const [bpm, setBpm] = useState(song.bpm);
-  const [language, setLanguage] = useState(song.language);
+  const [language, setLanguage] = useState(song.language.split('/')[0]);
   const [categories, setCategories] = useState<string[]>(song.categories);
   const [lyrics, setLyrics] = useState(song.lyrics);
+  const [lyricsByLanguage, setLyricsByLanguage] = useState<Record<string, string>>(song.lyricsByLanguage || {});
+  const [activeLanguageTab, setActiveLanguageTab] = useState<string>(song.language.split('/')[0]);
   const [notes, setNotes] = useState(song.notes);
   const [hymnalId, setHymnalId] = useState(song.hymnalId);
+  const [showAddLanguageModal, setShowAddLanguageModal] = useState(false);
+  const [newLanguageName, setNewLanguageName] = useState('');
 
   const originalKey = song.key;
+  const allLanguages = [language, ...Object.keys(lyricsByLanguage).filter(l => l !== language)];
 
   const handleSave = () => {
     if (!title.trim()) {
@@ -35,7 +40,14 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
     }
 
     let finalLyrics = lyrics;
-    const finalLyricsByLanguage = { ...song.lyricsByLanguage };
+    const finalLyricsByLanguage = { ...lyricsByLanguage };
+
+    // Si hay múltiples idiomas, guardar la letra actual en el idioma activo
+    if (allLanguages.length > 1) {
+      finalLyricsByLanguage[activeLanguageTab] = lyrics;
+      // Usar la letra del primer idioma como principal
+      finalLyrics = lyricsByLanguage[language] || lyrics;
+    }
 
     if (key !== originalKey) {
       const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -46,14 +58,13 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
 
       if (originalIndex !== -1 && newIndex !== -1) {
         const semitones = newIndex - originalIndex;
-        finalLyrics = transposeLyrics(lyrics, semitones);
+        finalLyrics = transposeLyrics(finalLyrics, semitones);
         Object.keys(finalLyricsByLanguage).forEach(lang => {
           finalLyricsByLanguage[lang] = transposeLyrics(finalLyricsByLanguage[lang], semitones);
         });
       }
     }
 
-    const allLanguages = [language, ...Object.keys(finalLyricsByLanguage).filter(l => l !== language)];
     const languageString = allLanguages.length > 1 ? allLanguages.join('/') : language;
 
     const updatedSong: Song = {
@@ -73,6 +84,56 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
     updateCustomSong(updatedSong);
     showNotification('Canción guardada', 'success');
     onBack();
+  };
+
+  const handleAddLanguage = () => {
+    if (!newLanguageName.trim()) {
+      showNotification('El nombre del idioma es obligatorio', 'error');
+      return;
+    }
+    if (allLanguages.includes(newLanguageName.trim())) {
+      showNotification('Este idioma ya existe', 'error');
+      return;
+    }
+    
+    const updatedLyricsByLanguage = { ...lyricsByLanguage };
+    // Guardar la letra actual antes de cambiar
+    updatedLyricsByLanguage[activeLanguageTab] = lyrics;
+    // Agregar el nuevo idioma con letra vacía
+    updatedLyricsByLanguage[newLanguageName.trim()] = '';
+    
+    setLyricsByLanguage(updatedLyricsByLanguage);
+    setActiveLanguageTab(newLanguageName.trim());
+    setLyrics('');
+    setNewLanguageName('');
+    setShowAddLanguageModal(false);
+    showNotification('Idioma agregado', 'success');
+  };
+
+  const handleLanguageTabChange = (lang: string) => {
+    // Guardar la letra actual antes de cambiar
+    const updatedLyricsByLanguage = { ...lyricsByLanguage };
+    updatedLyricsByLanguage[activeLanguageTab] = lyrics;
+    setLyricsByLanguage(updatedLyricsByLanguage);
+    
+    // Cambiar al nuevo idioma
+    setActiveLanguageTab(lang);
+    setLyrics(updatedLyricsByLanguage[lang] || '');
+  };
+
+  const handleRemoveLanguage = (lang: string) => {
+    if (lang === language) {
+      showNotification('No puedes eliminar el idioma principal', 'error');
+      return;
+    }
+    if (confirm(`¿Eliminar el idioma "${lang}"?`)) {
+      const updatedLyricsByLanguage = { ...lyricsByLanguage };
+      delete updatedLyricsByLanguage[lang];
+      setLyricsByLanguage(updatedLyricsByLanguage);
+      setActiveLanguageTab(language);
+      setLyrics(updatedLyricsByLanguage[language] || lyrics);
+      showNotification('Idioma eliminado', 'success');
+    }
   };
 
   const handleDelete = () => {
@@ -153,18 +214,28 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
 
         <div>
           <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Idioma Principal</label>
-          <select 
-            value={language} 
-            onChange={e => setLanguage(e.target.value)}
-            className="w-full p-3 rounded-xl border text-sm" 
-            style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-          >
-            <option value="Castellano">Castellano</option>
-            <option value="Aymara">Aymara</option>
-            <option value="Quechua">Quechua</option>
-            <option value="Inglés">Inglés</option>
-            <option value="Otro">Otro (especificar abajo)</option>
-          </select>
+          <div className="flex gap-2">
+            <select 
+              value={language} 
+              onChange={e => setLanguage(e.target.value)}
+              className="flex-1 p-3 rounded-xl border text-sm" 
+              style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+            >
+              <option value="Castellano">Castellano</option>
+              <option value="Aymara">Aymara</option>
+              <option value="Quechua">Quechua</option>
+              <option value="Inglés">Inglés</option>
+              <option value="Otro">Otro (especificar abajo)</option>
+            </select>
+            <button
+              onClick={() => setShowAddLanguageModal(true)}
+              className="px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2"
+              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">Agregar idioma</span>
+            </button>
+          </div>
           {language === 'Otro' && (
             <input 
               type="text" 
@@ -182,6 +253,37 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
 
         <div>
           <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Letra y Acordes</label>
+          
+          {/* Pestañas de idiomas si hay múltiples */}
+          {allLanguages.length > 1 && (
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {allLanguages.map(lang => (
+                <div key={lang} className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleLanguageTabChange(lang)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                    style={{
+                      backgroundColor: activeLanguageTab === lang ? 'var(--accent)' : 'var(--bg-tertiary)',
+                      color: activeLanguageTab === lang ? 'white' : 'var(--text-primary)',
+                      border: activeLanguageTab === lang ? '2px solid var(--accent)' : '2px solid transparent'
+                    }}
+                  >
+                    {lang}
+                  </button>
+                  {lang !== language && (
+                    <button
+                      onClick={() => handleRemoveLanguage(lang)}
+                      className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20"
+                      title="Eliminar idioma"
+                    >
+                      <X size={12} className="text-red-500" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
           <textarea
             value={lyrics}
             onChange={e => setLyrics(e.target.value)}
@@ -190,6 +292,11 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
             style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
             placeholder={`VERSO 1\n//G            Em          C          D\nLetra de la canción\n//G            Em          C          D\ncon acordes arriba`}
           />
+          {allLanguages.length > 1 && (
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              Editando: <strong>{activeLanguageTab}</strong> {activeLanguageTab === language && '(Idioma principal)'}
+            </p>
+          )}
         </div>
 
         <div>
@@ -202,6 +309,47 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
           <Save size={16} /> Guardar Cambios
         </button>
       </div>
+
+      {/* Modal para agregar nuevo idioma */}
+      {showAddLanguageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddLanguageModal(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Agregar Idioma</h3>
+            <div>
+              <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Nombre del idioma</label>
+              <input
+                type="text"
+                value={newLanguageName}
+                onChange={e => setNewLanguageName(e.target.value)}
+                placeholder="Ej: Francés, Portugués, etc."
+                className="w-full p-3 rounded-xl border text-sm"
+                style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setShowAddLanguageModal(false);
+                  setNewLanguageName('');
+                }}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold"
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddLanguage}
+                disabled={!newLanguageName.trim()}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

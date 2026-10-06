@@ -181,6 +181,33 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
             )}
           </div>
 
+          {/* Vista previa del cancionero */}
+          <div>
+            <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Vista Previa</label>
+            <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+              <div className="flex items-center gap-3 mb-3">
+                {coverImage ? (
+                  <div className="w-12 h-12 rounded-lg overflow-hidden">
+                    <img src={coverImage} alt={name} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ backgroundColor: color + '20' }}>
+                    {icon}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="font-bold text-sm">{name || 'Nombre del cancionero'}</div>
+                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {state.customSongs.filter(s => s.hymnalId === hymnal.id).length} canciones • {selectedLanguages.join('/')}
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+                Prefijo: <strong>{codePrefix || name.charAt(0).toUpperCase() || 'X'}</strong> • Color: <span style={{ color }}>{color}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
             <button onClick={handleSave} disabled={!name.trim()} className="flex-1 py-3 rounded-xl text-sm font-bold disabled:opacity-50" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Guardar Cambios</button>
