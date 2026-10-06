@@ -40,6 +40,56 @@ Porque todo lo que hay dentro de mí
 necesita ser cambiado, Señor`,
     notes: 'Canción de adoración',
   },
+  {
+    id: 'm2',
+    title: 'Jach\'a Apu Dios',
+    artist: 'Tradicional Andina',
+    code: 'M2',
+    number: 2,
+    hymnalId: 'mis-canciones',
+    key: 'Am',
+    timeSignature: '4/4',
+    bpm: 80,
+    language: 'Castellano/Aymara',
+    categories: ['Himno', 'Bilingüe'],
+    sections: [],
+    lyrics: `VERSO 1
+//Am             Em
+Gran Dios Padre, nuestro Creador
+//Am             Em
+Gran Dios Padre, nuestra Madre
+
+CORO
+//F              Am
+Príncipe de los dioses
+//F              Am
+Muy poderoso dios`,
+    lyricsByLanguage: {
+      'Castellano': `VERSO 1
+//Am             Em
+Gran Dios Padre, nuestro Creador
+//Am             Em
+Gran Dios Padre, nuestra Madre
+
+CORO
+//F              Am
+Príncipe de los dioses
+//F              Am
+Muy poderoso dios`,
+      'Aymara': `VERSO 1
+//Am             Em
+Jach'a Apu Dios, jiwasan Tatana
+//Am             Em
+Jach'a Apu Dios, jiwasan Mamana
+
+CORO
+//F              Am
+Jilïri Apunakana
+//F              Am
+Wali ch'ama Apunakana`
+    },
+    notes: 'Himno bilingüe Castellano/Aymara',
+  },
 ];
 
 export function generateSongCode(hymnal: Hymnal, number: number): string {
