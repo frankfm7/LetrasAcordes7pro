@@ -75,6 +75,16 @@ export interface UserPreferences {
   capo: number;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  avatar?: string; // base64 de la imagen
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AppState {
   favorites: string[];
   setlists: Setlist[];
@@ -83,4 +93,5 @@ export interface AppState {
   personalNotes: Record<string, string>;
   customHymnals: Hymnal[];
   customSongs: Song[];
+  userProfile?: UserProfile;
 }

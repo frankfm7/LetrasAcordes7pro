@@ -3,6 +3,8 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { AppState, Setlist, SetlistSong, Hymnal, Song, Order } from '../types';
 import { hymnals } from '../data/songs';
 
+import { UserProfile } from '../types';
+
 interface AppContextType {
   state: AppState;
   toggleFavorite: (songId: string) => void;
@@ -27,6 +29,7 @@ interface AppContextType {
   removeCustomSong: (id: string) => void;
   removeMultipleCustomSongs: (ids: string[]) => void;
   addMultipleToFavorites: (ids: string[]) => void;
+  updateUserProfile: (profile: UserProfile) => void;
 }
 
 const defaultState: AppState = {
@@ -37,6 +40,7 @@ const defaultState: AppState = {
   personalNotes: {},
   customHymnals: [],
   customSongs: [],
+  userProfile: undefined,
 };
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -201,15 +205,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [setState]);
 
+  const updateUserProfile = useCallback((profile: UserProfile) => {
+    setState(prev => ({ ...prev, userProfile: profile }));
+    localStorage.setItem('userProfile', JSON.stringify(profile));
+  }, [setState]);
+
   const value = useMemo(() => ({
     state, toggleFavorite, isFavorite, addSetlist, removeSetlist, addSongToSetlist, removeSongFromSetlist,
     addOrder, removeOrder, updateOrder, setTheme, setFontSize, setShowChords, setCapo,
     addCustomHymnal, removeCustomHymnal, updateCustomHymnal, addCustomSong, addMultipleCustomSongs,
-    updateCustomSong, removeCustomSong, removeMultipleCustomSongs, addMultipleToFavorites,
+    updateCustomSong, removeCustomSong, removeMultipleCustomSongs, addMultipleToFavorites, updateUserProfile,
   }), [state, toggleFavorite, isFavorite, addSetlist, removeSetlist, addSongToSetlist, removeSongFromSetlist,
     addOrder, removeOrder, updateOrder, setTheme, setFontSize, setShowChords, setCapo,
     addCustomHymnal, removeCustomHymnal, updateCustomHymnal, addCustomSong, addMultipleCustomSongs,
-    updateCustomSong, removeCustomSong, removeMultipleCustomSongs, addMultipleToFavorites]);
+    updateCustomSong, removeCustomSong, removeMultipleCustomSongs, addMultipleToFavorites, updateUserProfile]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

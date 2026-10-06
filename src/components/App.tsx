@@ -5,7 +5,7 @@ import { Song, Hymnal, Order, OrderItem } from '../types';
 import { songs as allSongs, hymnals, generateSongCode, getNextSongNumber } from '../data/songs';
 import { transposeLyrics } from '../utils/chords';
 import { generateSongShareText } from '../utils/shareUtils';
-import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, ChevronDown, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save } from 'lucide-react';
+import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, ChevronDown, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save, User } from 'lucide-react';
 import SplashScreen from './SplashScreen';
 import Metronome from './Metronome';
 import Tuner from './Tuner';
@@ -13,6 +13,13 @@ import SongEditor from './SongEditor';
 import AddHymnalModal from './AddHymnalModal';
 import EditHymnalModal from './EditHymnalModal';
 import ExportModal from './ExportModal';
+import ToolsMenu from './ToolsMenu';
+import ExportOptions from './ExportOptions';
+import ImportModal from './ImportModal';
+import ProfilePage from './ProfilePage';
+import SongSelectorModal from './SongSelectorModal';
+import MultiSongSelector from './MultiSongSelector';
+import HymnalSelector from './HymnalSelector';
 
 export default function App() {
   return (
@@ -31,7 +38,7 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [selectedHymnal, setSelectedHymnal] = useState<Hymnal | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [showEditHymnalModal, setShowEditHymnalModal] = useState(false);
   const [editingHymnal, setEditingHymnal] = useState<Hymnal | null>(null);
@@ -39,6 +46,12 @@ function AppContent() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [addingSongToHymnal, setAddingSongToHymnal] = useState<Hymnal | null>(null);
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [showSongSelector, setShowSongSelector] = useState(false);
+  const [showMultiSongSelector, setShowMultiSongSelector] = useState(false);
+  const [showHymnalSelector, setShowHymnalSelector] = useState(false);
 
   useEffect(() => {
     document.documentElement.className = state.preferences.theme;
@@ -56,7 +69,6 @@ function AppContent() {
     setCurrentPage(page);
     setSelectedSong(null);
     setSelectedHymnal(null);
-    setSidebarOpen(false);
     setEditingSong(null);
   }, []);
 
@@ -102,20 +114,129 @@ function AppContent() {
   }, [showNotification]);
 
   const handleDeleteHymnal = useCallback((id: string) => {
-    // Eliminar las canciones asociadas al himnario
+    // Eliminar las canciones asociadas al cancionero
     const songsToRemove = state.customSongs.filter(s => s.hymnalId === id);
     songsToRemove.forEach(song => {
       removeCustomSong(song.id);
     });
-    // Eliminar el himnario
+    // Eliminar el cancionero
     removeCustomHymnal(id);
   }, [removeCustomHymnal, removeCustomSong, state.customSongs]);
 
   if (showSplash) return <SplashScreen onComplete={() => setShowSplash(false)} />;
 
+  if (showToolsMenu) {
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <ToolsMenu 
+          onClose={() => setShowToolsMenu(false)} 
+          onNavigate={handleNavigate}
+          onExportClick={() => {
+            setShowToolsMenu(false);
+            setShowExportOptions(true);
+          }}
+          onImportClick={() => {
+            setShowToolsMenu(false);
+            setShowImportModal(true);
+          }}
+          onProfileClick={() => {
+            setShowToolsMenu(false);
+            setShowProfilePage(true);
+          }}
+        />
+      </Layout>
+    );
+  }
+
+  if (showProfilePage) {
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <ProfilePage onBack={() => setShowProfilePage(false)} />
+      </Layout>
+    );
+  }
+
+  if (showExportOptions) {
+    const allHymnals = [...hymnals, ...state.customHymnals];
+    const allAvailableSongs = [...allSongs, ...state.customSongs];
+    
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <ExportOptions
+          onClose={() => setShowExportOptions(false)}
+          songs={allAvailableSongs}
+          hymnals={allHymnals}
+          onExportSingle={() => {
+            setShowExportOptions(false);
+            setShowSongSelector(true);
+          }}
+          onExportMultiple={() => {
+            setShowExportOptions(false);
+            setShowMultiSongSelector(true);
+          }}
+          onExportHymnal={() => {
+            setShowExportOptions(false);
+            setShowHymnalSelector(true);
+          }}
+        />
+      </Layout>
+    );
+  }
+
+  if (showSongSelector) {
+    const allAvailableSongs = [...allSongs, ...state.customSongs];
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <SongSelectorModal
+          songs={allAvailableSongs}
+          onClose={() => setShowSongSelector(false)}
+        />
+      </Layout>
+    );
+  }
+
+  if (showMultiSongSelector) {
+    const allAvailableSongs = [...allSongs, ...state.customSongs];
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <MultiSongSelector
+          songs={allAvailableSongs}
+          onClose={() => setShowMultiSongSelector(false)}
+        />
+      </Layout>
+    );
+  }
+
+  if (showHymnalSelector) {
+    const allHymnals = [...hymnals, ...state.customHymnals];
+    const allAvailableSongs = [...allSongs, ...state.customSongs];
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <HymnalSelector
+          hymnals={allHymnals}
+          songs={allAvailableSongs}
+          onClose={() => setShowHymnalSelector(false)}
+        />
+      </Layout>
+    );
+  }
+
+  if (showImportModal) {
+    const allHymnals = [...hymnals, ...state.customHymnals];
+    
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          hymnals={allHymnals}
+        />
+      </Layout>
+    );
+  }
+
   if (editingSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongEditor song={editingSong} onBack={() => setEditingSong(null)} />
       </Layout>
     );
@@ -123,7 +244,7 @@ function AppContent() {
 
   if (selectedSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongView song={selectedSong} onBack={handleBack} onEdit={() => setEditingSong(selectedSong)} showNotification={showNotification} />
       </Layout>
     );
@@ -149,7 +270,7 @@ function AppContent() {
       notes: '',
     };
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongEditor song={newSong} onBack={() => setAddingSongToHymnal(null)} />
       </Layout>
     );
@@ -157,7 +278,7 @@ function AppContent() {
 
   if (selectedHymnal) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onAddSong={(h: Hymnal) => setAddingSongToHymnal(h)} onDeleteHymnal={handleDeleteHymnal} showNotification={showNotification} />
         {showEditHymnalModal && editingHymnal && (
           <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setSelectedHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
@@ -174,12 +295,13 @@ function AppContent() {
       case 'setlists': return <SetlistsPage onSelectSong={handleSelectSong} showNotification={showNotification} />;
       case 'orders': return <OrdersPage onSelectSong={handleSelectSong} showNotification={showNotification} />;
       case 'tools': return <ToolsPage />;
+      case 'profile': return <ProfilePage onBack={() => handleNavigate('home')} />;
       default: return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} onAddHymnal={() => setShowAddHymnalModal(true)} />;
     }
   };
 
   return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+    <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
       {renderPage()}
       {showEditHymnalModal && editingHymnal && (
         <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
@@ -215,8 +337,9 @@ function AppContent() {
   );
 }
 
-function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport }: any) {
+function Layout({ children, currentPage, onNavigate, onImport, onExport, onToolsClick }: any) {
   const { state, setTheme } = useApp();
+  const userProfile = state.userProfile;
   const menuItems = [
     { id: 'home', label: 'Inicio', icon: Home },
     { id: 'search', label: 'Buscar', icon: Search },
@@ -228,68 +351,43 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
-      {sidebarOpen && (
-        <aside className="fixed left-0 top-0 bottom-0 z-50 w-80 flex flex-col" style={{ backgroundColor: 'var(--bg-primary)', borderRight: '1px solid var(--border-color)' }}>
-          <div className="p-6 border-b" style={{ borderColor: 'var(--border-color)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>7</div>
-                <div><h1 className="font-bold text-lg" style={{ color: 'var(--accent)' }}>Cancionero<span className="font-black">7Pro</span></h1><p className="text-xs" style={{ color: 'var(--text-muted)' }}>v1.0 Premium</p></div>
-              </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><X size={18} /></button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><div className="text-lg font-bold" style={{ color: 'var(--accent)' }}>{state.favorites.length}</div><div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Favoritos</div></div>
-              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><div className="text-lg font-bold" style={{ color: 'var(--accent)' }}>{state.setlists.length}</div><div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Listas</div></div>
-              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><div className="text-lg font-bold" style={{ color: 'var(--accent)' }}>{state.customSongs.length + allSongs.length}</div><div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Canciones</div></div>
-            </div>
-          </div>
-          <nav className="flex-1 p-4 overflow-y-auto">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-3" style={{ color: 'var(--text-muted)' }}>Navegación</p>
-            {menuItems.map(item => (
-              <button key={item.id} onClick={() => onNavigate(item.id)} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ backgroundColor: currentPage === item.id ? 'var(--accent-light)' : 'transparent', color: currentPage === item.id ? 'var(--accent)' : 'var(--text-primary)' }}>
-                <item.icon size={20} /><span className="font-medium text-sm">{item.label}</span>
-              </button>
-            ))}
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-3" style={{ color: 'var(--text-muted)' }}>Datos</p>
-              <button onClick={() => { onExport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ color: 'var(--text-primary)' }}>
-                <Download size={20} /><span className="font-medium text-sm">Exportar Respaldo</span>
-              </button>
-              <button onClick={() => { onImport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ color: 'var(--text-primary)' }}>
-                <Upload size={20} /><span className="font-medium text-sm">Importar Respaldo</span>
-              </button>
-            </div>
-          </nav>
-          <div className="p-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
-            <button onClick={() => setTheme(state.preferences.theme === 'dark' ? 'light' : 'dark')} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-              {state.preferences.theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}Modo {state.preferences.theme === 'dark' ? 'Claro' : 'Oscuro'}
-            </button>
-          </div>
-        </aside>
-      )}
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-primary) 85%, transparent)', borderColor: 'var(--border-color)' }}>
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Menu size={20} /></button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>C7</div>
-              <div><h1 className="text-sm sm:text-lg font-bold leading-tight" style={{ color: 'var(--accent)' }}>Cancionero<span className="font-black">7Pro</span></h1><p className="text-[9px] sm:text-[10px] leading-tight" style={{ color: 'var(--text-muted)' }}>Letras y Acordes</p></div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>C7</div>
+            <div>
+              <h1 className="text-sm sm:text-lg font-bold leading-tight" style={{ color: 'var(--accent)' }}>Cancionero<span className="font-black">7Pro</span></h1>
+              <p className="text-[9px] sm:text-[10px] leading-tight" style={{ color: 'var(--text-muted)' }}>Letras y Acordes</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => onNavigate('search')} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Search size={18} /></button>
             <button onClick={() => setTheme(state.preferences.theme === 'dark' ? 'light' : 'dark')} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}>{state.preferences.theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
+            <button 
+              onClick={() => onNavigate('profile')}
+              className="flex items-center gap-2 p-1.5 pr-3 rounded-xl transition-all hover:opacity-80"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >
+              <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'var(--accent-light)' }}>
+                {userProfile?.avatar ? (
+                  <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={14} style={{ color: 'var(--accent)' }} />
+                )}
+              </div>
+              <span className="text-xs font-semibold hidden sm:block" style={{ color: 'var(--text-primary)' }}>
+                {userProfile?.name || 'Usuario'}
+              </span>
+            </button>
           </div>
         </div>
       </header>
       <main className="max-w-6xl mx-auto px-4 py-6 h-[calc(100vh-4rem-4rem)] overflow-y-auto">{children}</main>
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t backdrop-blur-xl" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-primary) 90%, transparent)', borderColor: 'var(--border-color)' }}>
         <div className="max-w-6xl mx-auto flex">
-          {[{ id: 'home', label: 'Inicio', icon: Home }, { id: 'search', label: 'Buscar', icon: Search }, { id: 'favorites', label: 'Favoritos', icon: Heart }, { id: 'setlists', label: 'Listas', icon: ListMusic }, { id: 'orders', label: 'Órdenes', icon: Music }, { id: 'tools', label: 'Tools', icon: Settings }].map(item => {
+          {[{ id: 'home', label: 'Inicio', icon: Home }, { id: 'search', label: 'Buscar', icon: Search }, { id: 'favorites', label: 'Favoritos', icon: Heart }, { id: 'setlists', label: 'Listas', icon: ListMusic }, { id: 'orders', label: 'Órdenes', icon: Music }, { id: 'tools', label: 'Menú+', icon: Settings }].map(item => {
             const isActive = currentPage === item.id;
-            return (<button key={item.id} onClick={() => onNavigate(item.id)} className={`flex-1 flex flex-col items-center py-3 px-1 transition-all ${isActive ? 'scale-105' : 'opacity-60'}`} style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}><item.icon size={18} strokeWidth={isActive ? 2.5 : 1.5} /><span className="text-[9px] font-semibold mt-1">{item.label}</span>{isActive && <div className="absolute top-0 w-8 h-0.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />}</button>);
+            return (<button key={item.id} onClick={() => item.id === 'tools' ? onToolsClick() : onNavigate(item.id)} className={`flex-1 flex flex-col items-center py-3 px-1 transition-all ${isActive ? 'scale-105' : 'opacity-60'}`} style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}><item.icon size={18} strokeWidth={isActive ? 2.5 : 1.5} /><span className="text-[9px] font-semibold mt-1">{item.label}</span>{isActive && <div className="absolute top-0 w-8 h-0.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />}</button>);
           })}
         </div>
       </nav>
@@ -301,8 +399,8 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) 
   const { state } = useApp();
   const allAvailableSongs = useMemo(() => [...allSongs, ...state.customSongs], [state.customSongs]);
   
-  // Combinar himnarios predeterminados con custom, evitando duplicados
-  // Si un himnario predeterminado fue editado, usar la versión custom
+  // Combinar cancioneros predeterminados con custom, evitando duplicados
+  // Si un cancionero predeterminado fue editado, usar la versión custom
   const allHymnals = useMemo(() => {
     const customIds = new Set(state.customHymnals.map(h => h.id));
     const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
@@ -347,11 +445,9 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal }: any) 
 }
 
 function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) {
-  const { state, toggleFavorite, isFavorite, setFontSize, setShowChords, setCapo, addSongToSetlist } = useApp();
+  const { state, toggleFavorite, isFavorite, setFontSize, setShowChords, setCapo } = useApp();
   const [transposition, setTransposition] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
-  const [showAddToList, setShowAddToList] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(10);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
@@ -389,16 +485,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   });
   const [editingNote, setEditingNote] = useState<'note2' | 'note3' | null>(null);
   const [showOriginalNote, setShowOriginalNote] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-
-  // Cerrar menú de acciones al hacer clic fuera
-  useEffect(() => {
-    const handleClickOutside = () => setShowActionsMenu(false);
-    if (showActionsMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showActionsMenu]);
 
   // Cerrar menú de velocidad al hacer clic fuera
   useEffect(() => {
@@ -500,18 +586,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         }
       }
     }
-  };
-
-  const copyLyrics = () => {
-    const cleanLyrics = transposedLyrics.replace(/\/\/[^\n]*\n/g, '').replace(/\n{3,}/g, '\n\n').trim();
-    navigator.clipboard.writeText(cleanLyrics);
-    showNotification('Letra copiada', 'success');
-  };
-
-  const shareSong = () => {
-    const text = generateSongShareText(song);
-    if (navigator.share) navigator.share({ title: song.title, text });
-    else { navigator.clipboard.writeText(text); showNotification('Copiado', 'success'); }
   };
 
   // Función para guardar notas personales
@@ -677,18 +751,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         <div className="flex items-center gap-1">
           <button onClick={() => toggleFavorite(song.id)} className="p-1.5 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={16} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
           <button onClick={() => setShowConfig(!showConfig)} className="p-1.5 rounded-lg" style={{ backgroundColor: showConfig ? 'var(--accent-light)' : 'var(--bg-tertiary)', color: showConfig ? 'var(--accent)' : 'var(--text-primary)' }}><Settings size={16} /></button>
-          <div className="relative" data-menu>
-            <button onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><MoreVertical size={16} /></button>
-            {showActionsMenu && (
-              <div className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-                <button onClick={() => { onEdit(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Edit3 size={14} /> Editar</button>
-                <button onClick={() => { copyLyrics(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Copy size={14} /> Copiar Letra</button>
-                <button onClick={() => { shareSong(); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Share2 size={14} /> Compartir</button>
-                <button onClick={() => { setShowExportModal(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}><Download size={14} /> Exportar</button>
-                <button onClick={() => { setShowAddToList(true); setShowActionsMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--accent)' }}><ListMusic size={14} /> Agregar a Lista</button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -860,30 +922,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
         </button>
       </div>
-
-      {showExportModal && (
-        <ExportModal songs={[song]} onClose={() => setShowExportModal(false)} songElementId="song-lyrics-container" />
-      )}
-
-      {showAddToList && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddToList(false)}>
-          <div className="w-full max-w-md rounded-2xl p-5" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-lg mb-3">Agregar a Lista</h3>
-            {state.setlists.length === 0 ? (
-              <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No tienes listas</p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {state.setlists.map(setlist => (
-                  <button key={setlist.id} onClick={() => { addSongToSetlist(setlist.id, { songId: song.id, transposition: 0, notes: '', order: setlist.songs.length }); setShowAddToList(false); showNotification('Agregada a la lista', 'success'); }} className="w-full text-left p-3 rounded-xl border" style={{ borderColor: 'var(--border-color)' }}>
-                    <div className="font-medium text-sm">{setlist.name}</div>
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{setlist.songs.length} canciones</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
