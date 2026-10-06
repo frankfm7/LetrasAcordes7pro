@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [showContent, setShowContent] = useState(false);
+  const hasAnimated = useRef(false);
 
   useEffect(() => {
     setTimeout(() => setShowContent(true), 300);
@@ -12,7 +13,10 @@ export default function SplashScreen({ onComplete }: { onComplete: () => void })
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
       <div className="text-center">
         {showContent && (
-          <div className="mb-8 animate-spin-once">
+          <div 
+            className={`mb-8 ${!hasAnimated.current ? 'animate-spin-once' : ''}`}
+            onAnimationEnd={() => { hasAnimated.current = true; }}
+          >
             <div className="w-32 h-32 mx-auto rounded-3xl flex items-center justify-center text-white text-5xl font-black shadow-2xl" style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(20px)' }}>
               C7
             </div>

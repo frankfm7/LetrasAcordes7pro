@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Hymnal } from '../types';
 import { X, Check, Image, Trash2, Save } from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { useNotification } from './NotificationProvider';
+import { hymnals } from '../data/songs';
 
 const ICONS = ['🎵', '🎶', '🎸', '🎹', '🥁', '🎺', '🎻', '🎤', '⛪', '🏔️', '🌿', '✍️', '📖', '🕊️', '⭐', '🌟', '🎼', '🎯', '❤️', '🔥', '🌊', '🌙', '☀️', '🌈', '🦋', '🌺', '🍀', '🎯', '🏆', '💎'];
 const COLORS = ['#a855f7', '#7c3aed', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#10b981', '#22c55e', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899', '#d946ef', '#8b5cf6'];
@@ -13,6 +16,8 @@ interface EditHymnalModalProps {
 }
 
 export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalModalProps) {
+  const { state, updateCustomSong } = useApp();
+  const { showNotification } = useNotification();
   const [name, setName] = useState(hymnal.name);
   const [description, setDescription] = useState(hymnal.description);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(hymnal.language.split('/'));
@@ -25,6 +30,20 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
   const [customLanguages, setCustomLanguages] = useState<string[]>([]);
 
   const allLanguages = [...DEFAULT_LANGUAGES, ...customLanguages];
+
+  // Obtener todos los prefijos usados por otros cancioneros
+  const usedPrefixes = useMemo(() => {
+    const allHymnals = [...hymnals, ...state.customHymnals];
+    return allHymnals
+      .filter(h => h.id !== hymnal.id)
+      .map(h => h.codePrefix || h.id.charAt(0).toUpperCase());
+  }, [hymnal.id, state.customHymnals]);
+
+  // Verificar si el prefijo actual está en uso
+  const isPrefixInUse = useMemo(() => {
+    const prefix = codePrefix.trim() || hymnal.id.charAt(0).toUpperCase();
+    return usedPrefixes.includes(prefix);
+  }, [codePrefix, hymnal.id, usedPrefixes]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -57,7 +76,30 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
 
   const handleSave = () => {
     if (!name.trim()) return;
+    
     const prefix = codePrefix.trim() || hymnal.id.charAt(0).toUpperCase();
+    
+    // Validar que el prefijo no esté en uso por otro cancionero
+    if (isPrefixInUse) {
+      showNotification('Prefijo ya usado por otro cancionero. Seleccione otro prefijo.', 'error');
+      return;
+    }
+    
+    // Si el prefijo cambió, actualizar los códigos de las canciones asociadas
+    const oldPrefix = hymnal.codePrefix || hymnal.id.charAt(0).toUpperCase();
+    if (prefix !== oldPrefix) {
+      const hymnalSongs = state.customSongs.filter(s => s.hymnalId === hymnal.id);
+      hymnalSongs.forEach(song => {
+        // Extraer el número del código antiguo
+        const numberMatch = song.code.match(/(\d+)$/);
+        const number = numberMatch ? numberMatch[1] : '1';
+        const newCode = `${prefix}${number}`;
+        
+        // Actualizar la canción con el nuevo código
+        updateCustomSong({ ...song, code: newCode });
+      });
+    }
+    
     const updatedHymnal: Hymnal = {
       ...hymnal,
       name: name.trim(),
@@ -138,9 +180,25 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
           {/* Prefijo del Código */}
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Prefijo del Código</label>
-            <input type="text" value={codePrefix} onChange={e => setCodePrefix(e.target.value.toUpperCase())} maxLength={3} placeholder="Ej: HA, AL, M"
-                   className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
-            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Se usará para identificar las canciones (ej: {codePrefix || name.charAt(0).toUpperCase() || 'X'}1, {codePrefix || name.charAt(0).toUpperCase() || 'X'}2...)</p>
+            <input 
+              type="text" 
+              value={codePrefix} 
+              onChange={e => setCodePrefix(e.target.value.toUpperCase())} 
+              maxLength={3} 
+              placeholder="Ej: HA, AL, M"
+              className="w-full p-3 rounded-xl border text-sm" 
+              style={{ 
+                backgroundColor: 'var(--bg-secondary)', 
+                borderColor: isPrefixInUse ? '#ef4444' : 'var(--border-color)', 
+                color: 'var(--text-primary)' 
+              }} 
+            />
+            {isPrefixInUse && (
+              <p className="text-xs mt-1 font-semibold" style={{ color: '#ef4444' }}>⚠️ Prefijo ya usado por otro cancionero. Seleccione otro prefijo.</p>
+            )}
+            {!isPrefixInUse && (
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Se usará para identificar las canciones (ej: {codePrefix || name.charAt(0).toUpperCase() || 'X'}1, {codePrefix || name.charAt(0).toUpperCase() || 'X'}2...)</p>
+            )}
           </div>
 
           {/* Iconos */}
