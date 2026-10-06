@@ -5,7 +5,7 @@ import { Song, Hymnal, Order, OrderItem } from '../types';
 import { songs as allSongs, hymnals, generateSongCode, getNextSongNumber } from '../data/songs';
 import { transposeLyrics } from '../utils/chords';
 import { generateSongShareText } from '../utils/shareUtils';
-import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, ChevronDown, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save } from 'lucide-react';
+import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, ChevronDown, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save, User } from 'lucide-react';
 import SplashScreen from './SplashScreen';
 import Metronome from './Metronome';
 import Tuner from './Tuner';
@@ -295,6 +295,7 @@ function AppContent() {
       case 'setlists': return <SetlistsPage onSelectSong={handleSelectSong} showNotification={showNotification} />;
       case 'orders': return <OrdersPage onSelectSong={handleSelectSong} showNotification={showNotification} />;
       case 'tools': return <ToolsPage />;
+      case 'profile': return <ProfilePage onBack={() => handleNavigate('home')} />;
       default: return <HomePage onSelectSong={handleSelectSong} onSelectHymnal={handleSelectHymnal} onSearch={() => handleNavigate('search')} onAddHymnal={() => setShowAddHymnalModal(true)} />;
     }
   };
@@ -338,6 +339,7 @@ function AppContent() {
 
 function Layout({ children, currentPage, onNavigate, onImport, onExport, onToolsClick }: any) {
   const { state, setTheme } = useApp();
+  const userProfile = state.userProfile;
   const menuItems = [
     { id: 'home', label: 'Inicio', icon: Home },
     { id: 'search', label: 'Buscar', icon: Search },
@@ -361,6 +363,22 @@ function Layout({ children, currentPage, onNavigate, onImport, onExport, onTools
           <div className="flex items-center gap-2">
             <button onClick={() => onNavigate('search')} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Search size={18} /></button>
             <button onClick={() => setTheme(state.preferences.theme === 'dark' ? 'light' : 'dark')} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}>{state.preferences.theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
+            <button 
+              onClick={() => onNavigate('profile')}
+              className="flex items-center gap-2 p-1.5 pr-3 rounded-xl transition-all hover:opacity-80"
+              style={{ backgroundColor: 'var(--bg-tertiary)' }}
+            >
+              <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center" style={{ backgroundColor: 'var(--accent-light)' }}>
+                {userProfile?.avatar ? (
+                  <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={14} style={{ color: 'var(--accent)' }} />
+                )}
+              </div>
+              <span className="text-xs font-semibold hidden sm:block" style={{ color: 'var(--text-primary)' }}>
+                {userProfile?.name || 'Usuario'}
+              </span>
+            </button>
           </div>
         </div>
       </header>
