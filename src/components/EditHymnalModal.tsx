@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { X, Check, Image as ImageIcon } from 'lucide-react';
 import { Hymnal } from '../types';
 import { useApp } from '../context/AppContext';
@@ -24,6 +24,8 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
   const [color, setColor] = useState(hymnal.color);
   const [codePrefix, setCodePrefix] = useState(hymnal.codePrefix || '');
   const [coverImage, setCoverImage] = useState<string | null>(hymnal.image || null);
+  const [isHovering, setIsHovering] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -39,6 +41,25 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
       setCoverImage(event.target?.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showNotification('La imagen es muy grande. Máximo 5MB', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setCoverImage(null);
   };
 
   const handleSave = () => {
@@ -154,57 +175,68 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
           </div>
 
           <div>
-            <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Imagen de Portada (Opcional)</label>
-            {coverImage ? (
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-lg overflow-hidden">
+            <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Imagen de Portada</label>
+            <div
+              className="relative w-full h-48 rounded-lg overflow-hidden"
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+            >
+              {coverImage ? (
+                <>
                   <img src={coverImage} alt="Preview" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Imagen cargada</p>
-                  <button onClick={() => setCoverImage(null)} className="text-xs text-red-500 font-semibold mt-1">Eliminar imagen</button>
-                </div>
-                <label className="px-3 py-2 rounded-lg text-xs font-bold cursor-pointer" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                  Cambiar
-                </label>
-              </div>
-            ) : (
-              <label className="cursor-pointer">
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                <div className="rounded-xl border-2 border-dashed p-4 text-center transition-all hover:border-opacity-70" style={{ borderColor: 'var(--border-color)' }}>
-                  <ImageIcon size={24} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-                  <p className="text-xs font-medium">Click para subir imagen</p>
-                  <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Se usará como fondo del cancionero</p>
-                </div>
-              </label>
-            )}
-          </div>
-
-          {/* Vista previa del cancionero */}
-          <div>
-            <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Vista Previa</label>
-            <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center gap-3 mb-3">
-                {coverImage ? (
-                  <div className="w-12 h-12 rounded-lg overflow-hidden">
-                    <img src={coverImage} alt={name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-2xl">{icon}</span>
+                      <h3 className="text-white font-bold text-lg drop-shadow-lg">{name || 'Nombre del cancionero'}</h3>
+                    </div>
+                    <p className="text-white/80 text-xs drop-shadow">
+                      {state.customSongs.filter(s => s.hymnalId === hymnal.id).length} canciones • {selectedLanguages.join('/')}
+                    </p>
                   </div>
-                ) : (
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ backgroundColor: color + '20' }}>
-                    {icon}
-                  </div>
-                )}
-                <div className="flex-1">
-                  <div className="font-bold text-sm">{name || 'Nombre del cancionero'}</div>
-                  <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {state.customSongs.filter(s => s.hymnalId === hymnal.id).length} canciones • {selectedLanguages.join('/')}
+                  {(isHovering || 'ontouchstart' in window) && (
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-black/50 hover:bg-black/70 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1 backdrop-blur-sm transition-all"
+                      >
+                        <ImageIcon size={14} />
+                        Cambiar
+                      </button>
+                      <button
+                        onClick={handleRemoveImage}
+                        className="bg-red-500/80 hover:bg-red-500 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1 backdrop-blur-sm transition-all"
+                      >
+                        <X size={14} />
+                        Borrar
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  className="w-full h-full flex flex-col items-center justify-center"
+                  style={{ backgroundColor: color }}
+                >
+                  <div className="text-center">
+                    <span className="text-4xl mb-2 block">{icon}</span>
+                    <h3 className="text-white font-bold text-lg drop-shadow-lg mb-3">{name || 'Nombre del cancionero'}</h3>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg text-sm font-semibold backdrop-blur-sm transition-all"
+                    >
+                      Agregar imagen
+                    </button>
                   </div>
                 </div>
-              </div>
-              <div className="text-xs p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
-                Prefijo: <strong>{codePrefix || name.charAt(0).toUpperCase() || 'X'}</strong> • Color: <span style={{ color }}>{color}</span>
-              </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
             </div>
           </div>
 
