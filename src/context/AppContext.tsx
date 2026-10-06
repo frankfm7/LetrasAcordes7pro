@@ -44,6 +44,30 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useLocalStorage<AppState>('cancionero-ruah-state', defaultState);
 
+  // Limpieza automática de datos corruptos al cargar
+  useEffect(() => {
+    const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+                        'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
+    
+    // Limpiar notas personales corruptas
+    const keys = Object.keys(localStorage);
+    const noteKeys = keys.filter(key => key.startsWith('song-notes-'));
+    
+    noteKeys.forEach(key => {
+      try {
+        const data = JSON.parse(localStorage.getItem(key) || '{}');
+        const note2Valid = !data.note2 || validNotes.includes(data.note2);
+        const note3Valid = !data.note3 || validNotes.includes(data.note3);
+        
+        if (!note2Valid || !note3Valid) {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        localStorage.removeItem(key);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     if (!state.orders) setState(prev => ({ ...prev, orders: [] }));
   }, [state.orders, setState]);
