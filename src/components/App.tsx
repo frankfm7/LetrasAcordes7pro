@@ -459,24 +459,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     return song.key.includes('m') ? newNote + 'm' : newNote;
   };
 
-  const getAlternativeKeys = () => {
-    const baseKey = song.key.replace('m', '');
-    const baseIndex = NOTES.indexOf(baseKey);
-    if (baseIndex === -1) return [];
-    
-    // Tonos alternativos comunes (saltos de 2, 3, 5, 7 semitonos)
-    const intervals = [2, 3, 5, 7];
-    return intervals.map(interval => {
-      const newIndex = (baseIndex + interval) % 12;
-      const note = NOTES[newIndex];
-      return song.key.includes('m') ? note + 'm' : note;
-    });
-  };
-
-  const handleTranspose = (semitones: number) => {
-    setTransposition(prev => prev + semitones);
-  };
-
   const handleKeyChange = (targetKey: string) => {
     const baseKey = song.key.replace('m', '');
     const targetBase = targetKey.replace('m', '');
@@ -530,94 +512,45 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
             <span className="font-bold" style={{ color: 'var(--accent)' }}>{song.key}</span>
             <span>{song.timeSignature}</span>
             <span>{song.bpm} BPM</span>
-            {/* Botones de notas en la misma línea */}
-            {song.notes && (
-              <div className="relative group">
-                <button
-                  onClick={() => setShowOriginalNote(!showOriginalNote)}
-                  className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105"
-                  style={{ 
-                    backgroundColor: showOriginalNote ? 'var(--accent)' : 'var(--bg-tertiary)',
-                    color: showOriginalNote ? 'white' : 'var(--text-primary)',
-                    border: '1px solid var(--border-color)'
-                  }}
-                  title={song.notes}
-                >
-                  📝
-                </button>
-                {showOriginalNote && (
-                  <div className="absolute top-full left-0 mt-2 p-3 rounded-lg shadow-lg z-50 max-w-xs" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-                    <p className="text-xs" style={{ color: 'var(--text-primary)' }}>{song.notes}</p>
-                  </div>
-                )}
-              </div>
-            )}
-            {/* Nota Personal 1 */}
-            <div className="relative">
-              <button
-                onDoubleClick={() => setEditingNote('note2')}
-                onClick={() => setShowOriginalNote(false)}
-                className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105"
-                style={{ 
-                  backgroundColor: personalNotes.note2 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                  color: personalNotes.note2 ? 'var(--accent)' : 'var(--text-muted)',
-                  border: '1px solid var(--border-color)'
-                }}
-                title={personalNotes.note2 || 'Doble clic para editar'}
-              >
-                📌1
-              </button>
-              {editingNote === 'note2' && (
-                <div className="absolute top-full left-0 mt-2 p-3 rounded-lg shadow-lg z-50 w-64" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-                  <textarea
-                    value={personalNotes.note2}
-                    onChange={(e) => setPersonalNotes({ ...personalNotes, note2: e.target.value })}
-                    className="w-full p-2 rounded border text-xs resize-none mb-2"
-                    rows={3}
-                    autoFocus
-                    placeholder="Escribe tu nota..."
-                    style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-                  />
-                  <div className="flex gap-2">
-                    <button onClick={() => savePersonalNote('note2', personalNotes.note2)} className="flex-1 px-2 py-1 rounded text-xs font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Guardar</button>
-                    <button onClick={() => setEditingNote(null)} className="flex-1 px-2 py-1 rounded text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
-                  </div>
-                </div>
-              )}
-            </div>
-            {/* Nota Personal 2 */}
-            <div className="relative">
-              <button
-                onDoubleClick={() => setEditingNote('note3')}
-                onClick={() => setShowOriginalNote(false)}
-                className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105"
-                style={{ 
-                  backgroundColor: personalNotes.note3 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
-                  color: personalNotes.note3 ? 'var(--accent)' : 'var(--text-muted)',
-                  border: '1px solid var(--border-color)'
-                }}
-                title={personalNotes.note3 || 'Doble clic para editar'}
-              >
-                📌2
-              </button>
-              {editingNote === 'note3' && (
-                <div className="absolute top-full left-0 mt-2 p-3 rounded-lg shadow-lg z-50 w-64" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-                  <textarea
-                    value={personalNotes.note3}
-                    onChange={(e) => setPersonalNotes({ ...personalNotes, note3: e.target.value })}
-                    className="w-full p-2 rounded border text-xs resize-none mb-2"
-                    rows={3}
-                    autoFocus
-                    placeholder="Escribe tu nota..."
-                    style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
-                  />
-                  <div className="flex gap-2">
-                    <button onClick={() => savePersonalNote('note3', personalNotes.note3)} className="flex-1 px-2 py-1 rounded text-xs font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Guardar</button>
-                    <button onClick={() => setEditingNote(null)} className="flex-1 px-2 py-1 rounded text-xs font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Botón nota original - clic para volver al tono original */}
+            <button
+              onClick={() => setTransposition(0)}
+              className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105"
+              style={{ 
+                backgroundColor: transposition === 0 ? 'var(--accent)' : 'var(--bg-tertiary)',
+                color: transposition === 0 ? 'white' : 'var(--text-primary)',
+                border: '1px solid var(--border-color)'
+              }}
+              title="Volver al tono original"
+            >
+              📝
+            </button>
+            {/* Nota Personal 1 - doble clic para seleccionar tono */}
+            <button
+              onDoubleClick={() => setEditingNote('note2')}
+              className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105"
+              style={{ 
+                backgroundColor: personalNotes.note2 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                color: personalNotes.note2 ? 'var(--accent)' : 'var(--text-muted)',
+                border: '1px solid var(--border-color)'
+              }}
+              title="Doble clic para seleccionar tono"
+            >
+              📌1
+            </button>
+            {/* Nota Personal 2 - doble clic para seleccionar tono */}
+            <button
+              onDoubleClick={() => setEditingNote('note3')}
+              className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105"
+              style={{ 
+                backgroundColor: personalNotes.note3 ? 'var(--accent-light)' : 'var(--bg-tertiary)',
+                color: personalNotes.note3 ? 'var(--accent)' : 'var(--text-muted)',
+                border: '1px solid var(--border-color)'
+              }}
+              title="Doble clic para seleccionar tono"
+            >
+              📌2
+            </button>
           </div>
         </div>
         <button onClick={() => toggleFavorite(song.id)} className="p-2 rounded-xl" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={20} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
@@ -655,71 +588,56 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         </div>
       )}
 
-      {/* Botones de Transposición */}
-      <div className="flex-shrink-0 mb-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Botón de tono actual */}
-          <button
-            className="px-3 py-1.5 rounded-lg text-sm font-bold transition-all hover:scale-105"
-            style={{ backgroundColor: '#8b5cf6', color: 'white' }}
-            title="Tono actual"
-          >
-            {getCurrentKey()}
-          </button>
-          
-          {/* Botón - */}
-          <button
-            onClick={() => handleTranspose(-1)}
-            className="px-3 py-1.5 rounded-lg text-sm font-bold transition-all hover:scale-105"
-            style={{ backgroundColor: '#8b5cf6', color: 'white' }}
-            title="Bajar medio tono"
-          >
-            −
-          </button>
-          
-          {/* Botón + */}
-          <button
-            onClick={() => handleTranspose(1)}
-            className="px-3 py-1.5 rounded-lg text-sm font-bold transition-all hover:scale-105"
-            style={{ backgroundColor: '#8b5cf6', color: 'white' }}
-            title="Subir medio tono"
-          >
-            +
-          </button>
+      {/* Popup selector de tonos para notas personales */}
+      {(editingNote === 'note2' || editingNote === 'note3') && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setEditingNote(null)}>
+          <div className="w-full max-w-sm rounded-2xl p-5" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-1">Seleccionar Tono</h3>
+            <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Tono actual: <strong style={{ color: 'var(--accent)' }}>{getCurrentKey()}</strong></p>
+            
+            <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>Mayores:</p>
+            <div className="grid grid-cols-6 gap-2 mb-4">
+              {NOTES.map(note => (
+                <button
+                  key={note}
+                  onClick={() => { handleKeyChange(note); setEditingNote(null); }}
+                  className="py-2 rounded-lg text-sm font-bold transition-all hover:scale-105"
+                  style={{ 
+                    backgroundColor: getCurrentKey() === note ? '#8b5cf6' : 'var(--bg-secondary)',
+                    color: getCurrentKey() === note ? 'white' : 'var(--text-primary)',
+                    border: `1px solid ${getCurrentKey() === note ? '#8b5cf6' : 'var(--border-color)'}`
+                  }}
+                >
+                  {note}
+                </button>
+              ))}
+            </div>
 
-          {/* Separador */}
-          <div className="w-px h-6 mx-1" style={{ backgroundColor: 'var(--border-color)' }}></div>
+            <p className="text-xs font-bold mb-2" style={{ color: 'var(--text-muted)' }}>Menores:</p>
+            <div className="grid grid-cols-6 gap-2 mb-4">
+              {NOTES.map(note => {
+                const minorKey = note + 'm';
+                return (
+                  <button
+                    key={minorKey}
+                    onClick={() => { handleKeyChange(minorKey); setEditingNote(null); }}
+                    className="py-2 rounded-lg text-sm font-bold transition-all hover:scale-105"
+                    style={{ 
+                      backgroundColor: getCurrentKey() === minorKey ? '#8b5cf6' : 'var(--bg-secondary)',
+                      color: getCurrentKey() === minorKey ? 'white' : 'var(--text-primary)',
+                      border: `1px solid ${getCurrentKey() === minorKey ? '#8b5cf6' : 'var(--border-color)'}`
+                    }}
+                  >
+                    {minorKey}
+                  </button>
+                );
+              })}
+            </div>
 
-          {/* Tonos alternativos */}
-          {getAlternativeKeys().map((altKey, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleKeyChange(altKey)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
-              style={{ 
-                backgroundColor: getCurrentKey() === altKey ? '#8b5cf6' : 'var(--card-bg)',
-                color: getCurrentKey() === altKey ? 'white' : 'var(--text-primary)',
-                border: `1px solid ${getCurrentKey() === altKey ? '#8b5cf6' : 'var(--border-color)'}`
-              }}
-              title={`Cambiar a ${altKey}`}
-            >
-              {altKey}
-            </button>
-          ))}
-
-          {/* Botón reset si hay transposición */}
-          {transposition !== 0 && (
-            <button
-              onClick={() => setTransposition(0)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:scale-105 ml-auto"
-              style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
-              title="Volver al tono original"
-            >
-              Original
-            </button>
-          )}
+            <button onClick={() => setEditingNote(null)} className="w-full py-2.5 rounded-xl text-sm font-bold mt-2" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto rounded-2xl border" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
         {sections.length > 0 && (
