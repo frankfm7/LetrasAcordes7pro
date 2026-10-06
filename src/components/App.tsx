@@ -480,6 +480,23 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   };
 
   const handleKeyChange = (targetKey: string) => {
+    // Validar que el tono sea válido antes de guardar
+    const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+                        'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
+    if (!validNotes.includes(targetKey)) return;
+    
+    // Guardar el tono seleccionado en la nota personal correspondiente
+    if (editingNote === 'note2') {
+      const updated = { ...personalNotes, note2: targetKey };
+      setPersonalNotes(updated);
+      localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
+    } else if (editingNote === 'note3') {
+      const updated = { ...personalNotes, note3: targetKey };
+      setPersonalNotes(updated);
+      localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
+    }
+    
+    // Calcular la transposición desde el tono original
     const baseKey = song.key.replace('m', '');
     const targetBase = targetKey.replace('m', '');
     const baseIndex = NOTES.indexOf(baseKey);
@@ -488,22 +505,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
     if (baseIndex !== -1 && targetIndex !== -1) {
       const semitones = targetIndex - baseIndex;
       setTransposition(semitones);
-      
-      // Validar que el tono sea válido antes de guardar
-      const validNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
-                          'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'];
-      if (!validNotes.includes(targetKey)) return;
-      
-      // Guardar el tono seleccionado en la nota personal correspondiente
-      if (editingNote === 'note2') {
-        const updated = { ...personalNotes, note2: targetKey };
-        setPersonalNotes(updated);
-        localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
-      } else if (editingNote === 'note3') {
-        const updated = { ...personalNotes, note3: targetKey };
-        setPersonalNotes(updated);
-        localStorage.setItem(`song-notes-${initialSong.id}`, JSON.stringify(updated));
-      }
     }
   };
 
@@ -994,8 +995,16 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
       </div>
       {/* Indicador de selección */}
       {selectedSongs.length > 0 && (
-        <div className="px-3 py-2 rounded-xl text-xs font-medium" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-          {selectedSongs.length} canción{selectedSongs.length !== 1 ? 'es' : ''} seleccionada{selectedSongs.length !== 1 ? 's' : ''} • Doble clic para seleccionar/deseleccionar
+        <div className="px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-between" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)', border: '2px solid var(--accent)' }}>
+          <span>✓ {selectedSongs.length} canción{selectedSongs.length !== 1 ? 'es' : ''} seleccionada{selectedSongs.length !== 1 ? 's' : ''}</span>
+          <span className="text-xs font-normal">Doble clic en las canciones para seleccionar/deseleccionar</span>
+        </div>
+      )}
+      
+      {/* Instrucción cuando no hay selección */}
+      {selectedSongs.length === 0 && hymnalSongs.length > 0 && (
+        <div className="px-4 py-2 rounded-xl text-xs" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
+          💡 Doble clic en las canciones para seleccionarlas y usar las acciones múltiples
         </div>
       )}
       
@@ -1005,22 +1014,26 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
           return (
             <div 
               key={song.id} 
-              className="flex items-center gap-3 p-3 rounded-xl border card-shadow-sm hover:card-shadow-md transition-all hover-lift" 
+              className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${isSelected ? 'card-shadow-md' : 'card-shadow-sm hover:card-shadow-md hover-lift'}`} 
               style={{ 
                 backgroundColor: isSelected ? 'var(--accent-light)' : 'var(--card-bg)', 
-                borderColor: isSelected ? 'var(--accent)' : 'var(--border-color)' 
+                borderColor: isSelected ? 'var(--accent)' : 'var(--border-color)',
+                borderWidth: isSelected ? '2px' : '1px'
               }}
-              onDoubleClick={() => handleSongDoubleClick(song.id)}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                handleSongDoubleClick(song.id);
+              }}
             >
               <button onClick={() => onSelectSong(song)} className="flex-1 text-left">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{getDisplayCode(song)}</span>
                   <span className="font-medium text-sm">{song.title}</span>
-                  {isSelected && <CheckSquare size={14} style={{ color: 'var(--accent)' }} />}
+                  {isSelected && <CheckSquare size={16} style={{ color: 'var(--accent)' }} />}
                 </div>
                 <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.timeSignature} • {song.bpm} BPM</div>
               </button>
-              <button onClick={() => toggleFavorite(song.id)} className="p-2 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={18} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
+              <button onClick={(e) => { e.stopPropagation(); toggleFavorite(song.id); }} className="p-2 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={18} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
             </div>
           );
         })}
