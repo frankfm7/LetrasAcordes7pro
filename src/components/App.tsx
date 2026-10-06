@@ -761,6 +761,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [lastClickTime, setLastClickTime] = useState<{ songId: string; time: number } | null>(null);
 
   const hymnalSongs = useMemo(() => {
     return [...allSongs, ...state.customSongs].filter(s => s.hymnalId === hymnal.id);
@@ -785,12 +786,35 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
     }
   }, [showHymnalMenu, showSelectionMenu]);
 
-  // Manejar doble clic para seleccionar/deseleccionar
-  const handleSongDoubleClick = (songId: string) => {
-    if (selectedSongs.includes(songId)) {
-      setSelectedSongs(selectedSongs.filter(id => id !== songId));
+  // Manejar clic seguido para seleccionar/deseleccionar
+  const handleSongClick = (songId: string, e: React.MouseEvent) => {
+    const now = Date.now();
+    const CLICK_THRESHOLD = 400; // 400ms para considerar "clic seguido"
+    
+    if (lastClickTime && lastClickTime.songId === songId && (now - lastClickTime.time) < CLICK_THRESHOLD) {
+      // Es un clic seguido - seleccionar/deseleccionar
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (selectedSongs.includes(songId)) {
+        setSelectedSongs(selectedSongs.filter(id => id !== songId));
+      } else {
+        setSelectedSongs([...selectedSongs, songId]);
+      }
+      
+      setLastClickTime(null);
     } else {
-      setSelectedSongs([...selectedSongs, songId]);
+      // Es el primer clic - guardar el tiempo
+      setLastClickTime({ songId, time: now });
+      
+      // Abrir la canción después de un pequeño delay para ver si viene un segundo clic
+      setTimeout(() => {
+        const currentLastClick = lastClickTime;
+        if (currentLastClick && currentLastClick.songId === songId && (Date.now() - currentLastClick.time) >= CLICK_THRESHOLD) {
+          // No hubo segundo clic, abrir la canción
+          onSelectSong(hymnalSongs.find(s => s.id === songId));
+        }
+      }, CLICK_THRESHOLD);
     }
   };
 
@@ -997,14 +1021,14 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
       {selectedSongs.length > 0 && (
         <div className="px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-between" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)', border: '2px solid var(--accent)' }}>
           <span>✓ {selectedSongs.length} canción{selectedSongs.length !== 1 ? 'es' : ''} seleccionada{selectedSongs.length !== 1 ? 's' : ''}</span>
-          <span className="text-xs font-normal">Doble clic en las canciones para seleccionar/deseleccionar</span>
+          <span className="text-xs font-normal">Clic seguido en las canciones para seleccionar/deseleccionar</span>
         </div>
       )}
       
       {/* Instrucción cuando no hay selección */}
       {selectedSongs.length === 0 && hymnalSongs.length > 0 && (
         <div className="px-4 py-2 rounded-xl text-xs" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>
-          💡 Doble clic en las canciones para seleccionarlas y usar las acciones múltiples
+          💡 Haz clic seguido (2 clics rápidos) en las canciones para seleccionarlas y usar las acciones múltiples
         </div>
       )}
       
@@ -1020,19 +1044,16 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
                 borderColor: isSelected ? 'var(--accent)' : 'var(--border-color)',
                 borderWidth: isSelected ? '2px' : '1px'
               }}
-              onDoubleClick={(e) => {
-                e.preventDefault();
-                handleSongDoubleClick(song.id);
-              }}
+              onClick={(e) => handleSongClick(song.id, e)}
             >
-              <button onClick={() => onSelectSong(song)} className="flex-1 text-left">
+              <div className="flex-1 text-left">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{getDisplayCode(song)}</span>
                   <span className="font-medium text-sm">{song.title}</span>
                   {isSelected && <CheckSquare size={16} style={{ color: 'var(--accent)' }} />}
                 </div>
                 <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.timeSignature} • {song.bpm} BPM</div>
-              </button>
+              </div>
               <button onClick={(e) => { e.stopPropagation(); toggleFavorite(song.id); }} className="p-2 rounded-lg" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={18} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
             </div>
           );
