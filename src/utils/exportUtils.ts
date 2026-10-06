@@ -1,5 +1,5 @@
 import { Song } from '../types';
-import { Document, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
+import { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer } from 'docx';
 import { saveAs } from 'file-saver';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -249,10 +249,7 @@ export const exportAsWord = async (songs: Song[]): Promise<void> => {
       }],
     });
 
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      const Packer = require('docx').Packer;
-      Packer.toBlob(doc).then(resolve).catch(reject);
-    });
+    const blob = await Packer.toBlob(doc);
 
     saveAs(blob, `${songs.length === 1 ? songs[0].title : 'canciones'}.docx`);
   } catch (error) {
