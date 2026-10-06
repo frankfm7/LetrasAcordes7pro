@@ -5,7 +5,7 @@ import { Song, Hymnal, Order, OrderItem } from './types';
 import { songs as allSongs, hymnals, generateSongCode, getNextSongNumber } from './data/songs';
 import { transposeLyrics } from './utils/chords';
 import { generateSongShareText } from './utils/shareUtils';
-import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, ChevronDown, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save, User } from 'lucide-react';
+import { Moon, Sun, Menu, X, Home, Search, Star, ListMusic, Music, Settings, Download, Upload, Plus, Heart, ChevronLeft, ChevronRight, ChevronDown, Copy, Share2, Edit3, Trash2, RotateCcw, Play, Pause, MoreVertical, Filter, CheckSquare, Square, ArrowRight, Image, Camera, Save, User, Eye } from 'lucide-react';
 import SplashScreen from './components/SplashScreen';
 import Metronome from './components/Metronome';
 import Tuner from './components/Tuner';
@@ -155,7 +155,10 @@ function AppContent() {
   }
 
   if (showExportOptions) {
-    const allHymnals = [...hymnals, ...state.customHymnals];
+    // Combinar himnarios evitando duplicados
+    const customIds = new Set(state.customHymnals.map(h => h.id));
+    const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+    const allHymnals = [...defaultNotEdited, ...state.customHymnals];
     const allAvailableSongs = [...allSongs, ...state.customSongs];
     
     return (
@@ -206,7 +209,10 @@ function AppContent() {
   }
 
   if (showHymnalSelector) {
-    const allHymnals = [...hymnals, ...state.customHymnals];
+    // Combinar himnarios evitando duplicados
+    const customIds = new Set(state.customHymnals.map(h => h.id));
+    const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+    const allHymnals = [...defaultNotEdited, ...state.customHymnals];
     const allAvailableSongs = [...allSongs, ...state.customSongs];
     return (
       <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
@@ -220,7 +226,10 @@ function AppContent() {
   }
 
   if (showImportModal) {
-    const allHymnals = [...hymnals, ...state.customHymnals];
+    // Combinar himnarios evitando duplicados (si un himnario predeterminado fue editado, usar la versión custom)
+    const customIds = new Set(state.customHymnals.map(h => h.id));
+    const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+    const allHymnals = [...defaultNotEdited, ...state.customHymnals];
     
     return (
       <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
@@ -659,6 +668,14 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           <span className="font-bold" style={{ color: 'var(--accent)' }} translate="no">{song.key}</span>
           <span translate="no">{song.timeSignature}</span>
           <span translate="no">{song.bpm} BPM</span>
+          {song.language && !song.lyricsByLanguage && (
+            <>
+              <span>•</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
+                {song.language}
+              </span>
+            </>
+          )}
           <button
             onClick={() => setTransposition(0)}
             className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
@@ -898,12 +915,13 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
 }
 
 function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onDeleteHymnal, showNotification }: any) {
-  const { state, toggleFavorite, isFavorite, addMultipleToFavorites, removeMultipleCustomSongs } = useApp();
+  const { state, toggleFavorite, isFavorite, addMultipleToFavorites, removeMultipleCustomSongs, updateCustomHymnal } = useApp();
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedSongs, setSelectedSongs] = useState<string[]>([]);
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
   const [showHymnalMenu, setShowHymnalMenu] = useState(false);
   const [showHymnalExportModal, setShowHymnalExportModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const hymnalSongs = useMemo(() => {
     return [...allSongs, ...state.customSongs].filter(s => s.hymnalId === hymnal.id);
@@ -1036,7 +1054,10 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
           </button>
           {showHymnalMenu && (
             <div onClick={(e) => e.stopPropagation()} className="absolute top-full right-0 mt-1 w-48 rounded-xl card-shadow-lg overflow-hidden z-50" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
-              <button onClick={() => onEditHymnal(hymnal)} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
+              <button onClick={() => { setShowPreviewModal(true); setShowHymnalMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
+                <Eye size={14} /> Vista previa
+              </button>
+              <button onClick={() => { onEditHymnal(hymnal); setShowHymnalMenu(false); }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
                 <Edit3 size={14} /> Editar
               </button>
               <button onClick={() => {
@@ -1045,6 +1066,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
                   showNotification('Cancionero eliminado', 'success');
                   onBack();
                 }
+                setShowHymnalMenu(false);
               }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80 text-red-500">
                 <Trash2 size={14} /> Eliminar
               </button>
@@ -1065,6 +1087,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
                 a.click();
                 URL.revokeObjectURL(url);
                 showNotification('Cancionero exportado', 'success');
+                setShowHymnalMenu(false);
               }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
                 <Download size={14} /> Exportar
               </button>
@@ -1076,6 +1099,7 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
                   navigator.clipboard.writeText(shareText);
                   showNotification('Información copiada', 'success');
                 }
+                setShowHymnalMenu(false);
               }} className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--text-primary)' }}>
                 <Share2 size={14} /> Compartir
               </button>
@@ -1178,6 +1202,55 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
           onClose={() => setShowHymnalExportModal(false)} 
         />
       )}
+      
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowPreviewModal(false)}>
+          <div className="w-full max-w-2xl rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {hymnal.image ? (
+                  <div className="w-16 h-16 rounded-xl overflow-hidden">
+                    <img src={hymnal.image} alt={hymnal.name} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl" style={{ backgroundColor: hymnal.color + '20' }}>
+                    {hymnal.icon}
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-xl font-bold">{hymnal.name}</h3>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hymnalSongs.length} canciones • {hymnal.language}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPreviewModal(false)} className="p-2 rounded-lg hover:opacity-70" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            {hymnal.description && (
+              <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>{hymnal.description}</p>
+            )}
+            
+            <div className="space-y-2">
+              {hymnalSongs.map(song => (
+                <div key={song.id} className="p-3 rounded-xl border" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{getDisplayCode(song)}</span>
+                    <span className="font-medium text-sm">{song.title}</span>
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key}</div>
+                </div>
+              ))}
+              {hymnalSongs.length === 0 && (
+                <div className="text-center py-8">
+                  <Music size={40} style={{ color: 'var(--text-muted)' }} className="mx-auto mb-3" />
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No hay canciones en este cancionero</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1186,7 +1259,12 @@ function SearchPage({ onSelectSong }: any) {
   const { state, toggleFavorite, isFavorite } = useApp();
   const [query, setQuery] = useState('');
   const allAvailableSongs = useMemo(() => [...allSongs, ...state.customSongs], [state.customSongs]);
-  const allHymnals = useMemo(() => [...hymnals, ...state.customHymnals], [state.customHymnals]);
+  // Combinar himnarios evitando duplicados
+  const allHymnals = useMemo(() => {
+    const customIds = new Set(state.customHymnals.map(h => h.id));
+    const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+    return [...defaultNotEdited, ...state.customHymnals];
+  }, [state.customHymnals]);
   
   const filteredSongs = useMemo(() => {
     if (!query) return [];
@@ -1231,7 +1309,12 @@ function SearchPage({ onSelectSong }: any) {
 function FavoritesPage({ onSelectSong }: any) {
   const { state, toggleFavorite } = useApp();
   const favoriteSongs = useMemo(() => [...allSongs, ...state.customSongs].filter(s => state.favorites.includes(s.id)), [state.favorites, state.customSongs]);
-  const allHymnals = useMemo(() => [...hymnals, ...state.customHymnals], [state.customHymnals]);
+  // Combinar himnarios evitando duplicados
+  const allHymnals = useMemo(() => {
+    const customIds = new Set(state.customHymnals.map(h => h.id));
+    const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+    return [...defaultNotEdited, ...state.customHymnals];
+  }, [state.customHymnals]);
 
   const getDisplayCode = (song: any) => {
     const hymnal = allHymnals.find(h => h.id === song.hymnalId);

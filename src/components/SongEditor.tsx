@@ -83,7 +83,10 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
     }
   };
 
-  const allHymnals = [...hymnals, ...state.customHymnals];
+  // Combinar himnarios evitando duplicados
+  const customIds = new Set(state.customHymnals.map(h => h.id));
+  const defaultNotEdited = hymnals.filter(h => !customIds.has(h.id));
+  const allHymnals = [...defaultNotEdited, ...state.customHymnals];
 
   return (
     <div className="max-w-3xl mx-auto pb-20">
@@ -150,8 +153,31 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
 
         <div>
           <label className="text-xs font-bold mb-1.5 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Idioma Principal</label>
-          <input type="text" value={language} onChange={e => setLanguage(e.target.value)}
-                 className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} />
+          <select 
+            value={language} 
+            onChange={e => setLanguage(e.target.value)}
+            className="w-full p-3 rounded-xl border text-sm" 
+            style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+          >
+            <option value="Castellano">Castellano</option>
+            <option value="Aymara">Aymara</option>
+            <option value="Quechua">Quechua</option>
+            <option value="Inglés">Inglés</option>
+            <option value="Otro">Otro (especificar abajo)</option>
+          </select>
+          {language === 'Otro' && (
+            <input 
+              type="text" 
+              placeholder="Especificar idioma..."
+              className="w-full p-3 rounded-xl border text-sm mt-2" 
+              style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+              onBlur={e => {
+                if (e.target.value.trim()) {
+                  setLanguage(e.target.value.trim());
+                }
+              }}
+            />
+          )}
         </div>
 
         <div>

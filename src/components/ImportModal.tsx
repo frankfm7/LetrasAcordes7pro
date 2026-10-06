@@ -5,6 +5,7 @@ import { importFromTxt, importFromWord, importFromPdf, importFromImage, importFr
 import { useApp } from '../context/AppContext';
 import { useNotification } from './NotificationProvider';
 import AddHymnalModal from './AddHymnalModal';
+import ImageCropper from './ImageCropper';
 import { hymnals as defaultHymnals } from '../data/songs';
 
 interface ImportModalProps {
@@ -21,6 +22,8 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAddHymnalModal, setShowAddHymnalModal] = useState(false);
+  const [showImageCropper, setShowImageCropper] = useState(false);
+  const [imageFileToCrop, setImageFileToCrop] = useState<File | null>(null);
 
   const allHymnals = [...hymnals];
 
@@ -28,13 +31,21 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const fileType = file.name.toLowerCase();
+
+    // Si es una imagen, abrir el cropper
+    if (fileType.match(/\.(jpg|jpeg|png)$/)) {
+      setImageFileToCrop(file);
+      setShowImageCropper(true);
+      return;
+    }
+
     setSelectedFile(file);
     setIsProcessing(true);
     setError(null);
     setPreviews([]);
 
     try {
-      const fileType = file.name.toLowerCase();
       let text = '';
 
       if (fileType.endsWith('.txt')) {
@@ -48,8 +59,6 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
         setPreviews([songData]);
         setIsProcessing(false);
         return;
-      } else if (fileType.match(/\.(jpg|jpeg|png)$/)) {
-        text = await importFromImage(file, selectedHymnalId).then(s => s.lyrics || '');
       } else {
         throw new Error('Formato de archivo no soportado');
       }
@@ -61,6 +70,29 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleImageCropped = async (croppedImage: File) => {
+    setShowImageCropper(false);
+    setSelectedFile(croppedImage);
+    setIsProcessing(true);
+    setError(null);
+    setPreviews([]);
+
+    try {
+      const text = await importFromImage(croppedImage, selectedHymnalId).then(s => s.lyrics || '');
+      const songsData = parseMultipleSongsFromText(text, selectedHymnalId);
+      setPreviews(songsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al procesar la imagen');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCancelCrop = () => {
+    setShowImageCropper(false);
+    setImageFileToCrop(null);
   };
 
   const handleImport = () => {
@@ -220,6 +252,14 @@ export default function ImportModal({ onClose, hymnals }: ImportModalProps) {
 
       {showAddHymnalModal && (
         <AddHymnalModal onClose={() => setShowAddHymnalModal(false)} />
+      )}
+
+      {showImageCropper && imageFileToCrop && (
+        <ImageCropper
+          imageFile={imageFileToCrop}
+          onCropComplete={handleImageCropped}
+          onCancel={handleCancelCrop}
+        />
       )}
     </div>
   );

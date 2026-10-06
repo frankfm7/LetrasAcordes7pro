@@ -73,11 +73,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Limpiar canciones duplicadas
+    // Limpiar canciones y himnarios duplicados
     const stateData = localStorage.getItem('cancionero-ruah-state');
     if (stateData) {
       try {
         const parsed = JSON.parse(stateData);
+        let needsUpdate = false;
+        
+        // Limpiar canciones duplicadas
         if (parsed.customSongs && Array.isArray(parsed.customSongs)) {
           const uniqueSongs = parsed.customSongs.filter((song: any, index: number, self: any[]) =>
             index === self.findIndex((s: any) => s.id === song.id)
@@ -86,11 +89,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (uniqueSongs.length !== parsed.customSongs.length) {
             console.log(`Eliminadas ${parsed.customSongs.length - uniqueSongs.length} canciones duplicadas`);
             parsed.customSongs = uniqueSongs;
-            localStorage.setItem('cancionero-ruah-state', JSON.stringify(parsed));
+            needsUpdate = true;
           }
         }
+        
+        // Limpiar himnarios duplicados
+        if (parsed.customHymnals && Array.isArray(parsed.customHymnals)) {
+          const uniqueHymnals = parsed.customHymnals.filter((hymnal: any, index: number, self: any[]) =>
+            index === self.findIndex((h: any) => h.id === hymnal.id)
+          );
+          
+          if (uniqueHymnals.length !== parsed.customHymnals.length) {
+            console.log(`Eliminados ${parsed.customHymnals.length - uniqueHymnals.length} himnarios duplicados`);
+            parsed.customHymnals = uniqueHymnals;
+            needsUpdate = true;
+          }
+        }
+        
+        if (needsUpdate) {
+          localStorage.setItem('cancionero-ruah-state', JSON.stringify(parsed));
+        }
       } catch (error) {
-        console.error('Error al limpiar canciones duplicadas:', error);
+        console.error('Error al limpiar duplicados:', error);
       }
     }
   }, []);
