@@ -177,13 +177,18 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
           <div>
             <label className="text-xs font-bold mb-2 block uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Imagen de Portada</label>
             <div
-              className="relative w-full h-48 rounded-lg overflow-hidden"
+              className="relative w-full h-48 rounded-lg overflow-hidden transition-all duration-300"
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
+              style={{
+                backgroundColor: coverImage ? undefined : color,
+                backgroundImage: coverImage ? `url(${coverImage})` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
             >
-              {coverImage ? (
+              {coverImage && (
                 <>
-                  <img src={coverImage} alt="Preview" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3">
                     <div className="flex items-center gap-2 mb-1">
@@ -213,11 +218,9 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
                     </div>
                   )}
                 </>
-              ) : (
-                <div
-                  className="w-full h-full flex flex-col items-center justify-center"
-                  style={{ backgroundColor: color }}
-                >
+              )}
+              {!coverImage && (
+                <div className="w-full h-full flex flex-col items-center justify-center">
                   <div className="text-center">
                     <span className="text-4xl mb-2 block">{icon}</span>
                     <h3 className="text-white font-bold text-lg drop-shadow-lg mb-3">{name || 'Nombre del cancionero'}</h3>
@@ -238,6 +241,9 @@ export default function EditHymnalModal({ hymnal, onClose, onSave }: EditHymnalM
                 className="hidden"
               />
             </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+              💡 Selecciona un color arriba o sube una imagen de portada
+            </p>
           </div>
 
           <div className="flex gap-3 pt-2">
