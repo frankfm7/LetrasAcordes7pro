@@ -911,8 +911,8 @@ function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong, onD
           </button>
         )}
         
-        {/* Menú de acciones de selección múltiple - solo visible en modo selección */}
-        {selectionMode && selectedSongs.length > 0 && (
+        {/* Menú de acciones de selección múltiple - visible en modo selección */}
+        {selectionMode && (
           <div className="relative">
             <button 
               onClick={(e) => { e.stopPropagation(); setShowSelectionMenu(!showSelectionMenu); }} 
