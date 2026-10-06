@@ -56,8 +56,8 @@ export default function Tuner() {
       <div className="text-center py-4">
         {isPlayingRef ? (
           <div className="animate-pulse">
-            <div className="text-4xl font-bold" style={{ color: 'var(--accent)' }}>{GUITAR_STRINGS.find(s => s.label === isPlayingRef)?.note}</div>
-            <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>{playingFreq?.toFixed(2)} Hz</div>
+            <div className="text-4xl font-bold" style={{ color: 'var(--accent)' }} translate="no">{GUITAR_STRINGS.find(s => s.label === isPlayingRef)?.note}</div>
+            <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }} translate="no">{playingFreq?.toFixed(2)} Hz</div>
           </div>
         ) : (
           <div>
@@ -69,9 +69,9 @@ export default function Tuner() {
       <div className="grid grid-cols-2 gap-3">
         {GUITAR_STRINGS.map((string) => (
           <button key={string.label} onClick={() => playNote(string.freq, string.label)} className="p-4 rounded-xl border text-center transition-all active:scale-95" style={{ backgroundColor: isPlayingRef === string.label ? 'var(--accent-light)' : 'var(--card-bg)', borderColor: isPlayingRef === string.label ? 'var(--accent)' : 'var(--border-color)' }}>
-            <div className="text-2xl font-bold" style={{ color: isPlayingRef === string.label ? 'var(--accent)' : 'var(--text-primary)' }}>{string.note}</div>
-            <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Cuerda {string.label} • {string.name}</div>
-            <div className="text-xs mt-0.5 font-mono" style={{ color: 'var(--text-muted)' }}>{string.freq.toFixed(2)} Hz</div>
+            <div className="text-2xl font-bold" style={{ color: isPlayingRef === string.label ? 'var(--accent)' : 'var(--text-primary)' }} translate="no">{string.note}</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Cuerda <span translate="no">{string.label}</span> • {string.name}</div>
+            <div className="text-xs mt-0.5 font-mono" style={{ color: 'var(--text-muted)' }} translate="no">{string.freq.toFixed(2)} Hz</div>
           </button>
         ))}
       </div>

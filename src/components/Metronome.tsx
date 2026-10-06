@@ -72,8 +72,8 @@ export default function Metronome() {
         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Control preciso del tempo</p>
       </div>
       <div className="text-center">
-        <div className="text-6xl font-bold font-mono" style={{ color: 'var(--accent)' }}>{bpm}</div>
-        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>BPM</div>
+        <div className="text-6xl font-bold font-mono" style={{ color: 'var(--accent)' }} translate="no">{bpm}</div>
+        <div className="text-sm" style={{ color: 'var(--text-muted)' }} translate="no">BPM</div>
       </div>
       <div className="flex justify-center gap-3">
         {Array.from({ length: timeSignature }).map((_, i) => (
@@ -82,10 +82,10 @@ export default function Metronome() {
       </div>
       <input type="range" min="40" max="200" value={bpm} onChange={e => setBpm(Number(e.target.value))} className="w-full accent-purple-600" />
       <div className="flex justify-center gap-4">
-        <button onClick={() => setBpm(b => Math.max(40, b - 5))} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>-5</button>
-        <button onClick={() => setBpm(b => Math.max(40, b - 1))} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>-1</button>
-        <button onClick={() => setBpm(b => Math.min(200, b + 1))} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>+1</button>
-        <button onClick={() => setBpm(b => Math.min(200, b + 5))} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }}>+5</button>
+        <button onClick={() => setBpm(b => Math.max(40, b - 5))} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }} translate="no">-5</button>
+        <button onClick={() => setBpm(b => Math.max(40, b - 1))} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }} translate="no">-1</button>
+        <button onClick={() => setBpm(b => Math.min(200, b + 1))} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }} translate="no">+1</button>
+        <button onClick={() => setBpm(b => Math.min(200, b + 5))} className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--bg-tertiary)' }} translate="no">+5</button>
       </div>
       <div className="flex justify-center">
         <button onClick={isPlaying ? stop : start} className="w-20 h-20 rounded-full flex items-center justify-center transition-all active:scale-95" style={{ backgroundColor: isPlaying ? '#ef4444' : 'var(--accent)', color: 'white', boxShadow: `0 4px 20px ${isPlaying ? 'rgba(239,68,68,0.4)' : 'rgba(124,58,237,0.4)'}` }}>
@@ -101,7 +101,7 @@ export default function Metronome() {
           <span className="text-sm font-medium">Compás:</span>
           <div className="flex gap-1">
             {[3, 4, 5, 6, 7].map(ts => (
-              <button key={ts} onClick={() => setTimeSignature(ts)} className="w-8 h-8 rounded-lg text-xs font-bold transition-colors" style={{ backgroundColor: timeSignature === ts ? 'var(--accent)' : 'var(--bg-tertiary)', color: timeSignature === ts ? 'white' : 'var(--text-primary)' }}>{ts}/4</button>
+              <button key={ts} onClick={() => setTimeSignature(ts)} className="w-8 h-8 rounded-lg text-xs font-bold transition-colors" style={{ backgroundColor: timeSignature === ts ? 'var(--accent)' : 'var(--bg-tertiary)', color: timeSignature === ts ? 'white' : 'var(--text-primary)' }} translate="no">{ts}/4</button>
             ))}
           </div>
         </div>

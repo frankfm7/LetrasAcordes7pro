@@ -530,15 +530,15 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
         const sectionId = `${type}${num}`.toLowerCase();
         const sectionColors: Record<string, string> = { 'VERSO': '#7c3aed', 'CORO': '#f59e0b', 'PUENTE': '#059669', 'INTRO': '#6366f1', 'FINAL': '#ef4444', 'PRE-CORO': '#ec4899', 'PRE CORO': '#ec4899', 'OUTRO': '#0891b2', 'BRIDGE': '#059669' };
         const color = sectionColors[type] || 'var(--accent)';
-        elements.push(<div key={lineIndex++} data-section={sectionId} className="mt-8 mb-3"><span className="text-sm font-black uppercase tracking-widest px-3 py-1.5 rounded-lg inline-block" style={{ color, backgroundColor: color + '20' }}>{trimmed}</span></div>);
+        elements.push(<div key={lineIndex++} data-section={sectionId} className="mt-8 mb-3"><span className="text-sm font-black uppercase tracking-widest px-3 py-1.5 rounded-lg inline-block" style={{ color, backgroundColor: color + '20' }} translate="no">{trimmed}</span></div>);
         continue;
       }
       if (trimmed.startsWith('//')) {
         const chordLine = trimmed.substring(2).trim();
         if (i + 1 < lines.length && lines[i + 1].trim() !== '' && !lines[i + 1].trim().startsWith('//')) {
           const lyricLine = lines[i + 1]; i++;
-          elements.push(<div key={lineIndex++} className="mb-4">{preferences.showChords && <div className="font-mono text-sm mb-1 whitespace-pre" style={{ color: 'var(--accent)', fontWeight: 800, letterSpacing: '0.05em' }}>{chordLine}</div>}<div className="font-lyrics leading-relaxed whitespace-pre-wrap" style={{ fontSize: `${preferences.fontSize}px` }}>{lyricLine}</div></div>);
-        } else { elements.push(<div key={lineIndex++} className="mb-2">{preferences.showChords && <div className="font-mono text-sm whitespace-pre" style={{ color: 'var(--accent)', fontWeight: 800 }}>{chordLine}</div>}</div>); }
+          elements.push(<div key={lineIndex++} className="mb-4">{preferences.showChords && <div className="font-mono text-sm mb-1 whitespace-pre" style={{ color: 'var(--accent)', fontWeight: 800, letterSpacing: '0.05em' }} translate="no">{chordLine}</div>}<div className="font-lyrics leading-relaxed whitespace-pre-wrap" style={{ fontSize: `${preferences.fontSize}px` }}>{lyricLine}</div></div>);
+        } else { elements.push(<div key={lineIndex++} className="mb-2">{preferences.showChords && <div className="font-mono text-sm whitespace-pre" style={{ color: 'var(--accent)', fontWeight: 800 }} translate="no">{chordLine}</div>}</div>); }
         continue;
       }
       elements.push(<div key={lineIndex++} className="mb-4"><div className="font-lyrics leading-relaxed whitespace-pre-wrap" style={{ fontSize: `${preferences.fontSize}px` }}>{line}</div></div>);
@@ -555,9 +555,9 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           <div className="flex items-center gap-2 text-xs flex-wrap" style={{ color: 'var(--text-muted)' }}>
             <span>{song.artist}</span>
             <span>•</span>
-            <span className="font-bold" style={{ color: 'var(--accent)' }}>{song.key}</span>
-            <span>{song.timeSignature}</span>
-            <span>{song.bpm} BPM</span>
+            <span className="font-bold" style={{ color: 'var(--accent)' }} translate="no">{song.key}</span>
+            <span translate="no">{song.timeSignature}</span>
+            <span translate="no">{song.bpm} BPM</span>
             {/* Botón nota original - clic para volver al tono original */}
             <button
               onClick={() => setTransposition(0)}
@@ -568,6 +568,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 border: '1px solid var(--border-color)'
               }}
               title="Volver al tono original"
+              translate="no"
             >
               {song.key}
             </button>
@@ -587,6 +588,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 border: '1px solid var(--border-color)'
               }}
               title="Clic para aplicar, doble clic para cambiar"
+              translate="no"
             >
               {formatNote(personalNotes.note2) || '—'}
             </button>
@@ -606,6 +608,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                 border: '1px solid var(--border-color)'
               }}
               title="Clic para aplicar, doble clic para cambiar"
+              translate="no"
             >
               {formatNote(personalNotes.note3) || '—'}
             </button>
@@ -631,7 +634,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       </div>
 
       {showConfig && (
-        <div className="flex-shrink-0 rounded-2xl border p-4 space-y-4 mb-4" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+        <div className="flex-shrink-0 rounded-2xl border p-4 space-y-4 mb-4" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }} translate="no">
           <div>
             <div className="flex items-center justify-between mb-2"><span className="text-sm font-semibold">Transposición</span>{transposition !== 0 && <button onClick={() => setTransposition(0)} className="text-xs flex items-center gap-1" style={{ color: 'var(--accent)' }}><RotateCcw size={12} /> Original</button>}</div>
             <div className="flex items-center gap-2">
@@ -649,7 +652,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       {/* Popup selector de tonos para notas personales */}
       {(editingNote === 'note2' || editingNote === 'note3') && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setEditingNote(null)}>
-          <div className="w-full max-w-sm rounded-2xl p-5" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-sm rounded-2xl p-5" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()} translate="no">
             <h3 className="font-bold text-lg mb-1">Seleccionar Tono</h3>
             <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Tono actual: <strong style={{ color: 'var(--accent)' }}>{getCurrentKey()}</strong></p>
             
@@ -665,6 +668,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                     color: getCurrentKey() === note ? 'white' : 'var(--text-primary)',
                     border: `1px solid ${getCurrentKey() === note ? '#8b5cf6' : 'var(--border-color)'}`
                   }}
+                  translate="no"
                 >
                   {note}
                 </button>
@@ -685,6 +689,7 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
                       color: getCurrentKey() === minorKey ? 'white' : 'var(--text-primary)',
                       border: `1px solid ${getCurrentKey() === minorKey ? '#8b5cf6' : 'var(--border-color)'}`
                     }}
+                    translate="no"
                   >
                     {minorKey}
                   </button>
@@ -704,12 +709,12 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               {sections.map((section, idx) => {
                 const sectionColors: Record<string, string> = { 'VERSO': '#7c3aed', 'CORO': '#f59e0b', 'PUENTE': '#059669', 'INTRO': '#6366f1', 'FINAL': '#ef4444', 'PRE-CORO': '#ec4899', 'PRE CORO': '#ec4899', 'OUTRO': '#0891b2', 'BRIDGE': '#059669' };
                 const color = sectionColors[section.type] || 'var(--accent)';
-                return (<button key={idx} onClick={() => scrollToSection(section.id)} className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 active:scale-95 flex-shrink-0" style={{ backgroundColor: color + '20', color }}>{section.label}</button>);
+                return (<button key={idx} onClick={() => scrollToSection(section.id)} className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 active:scale-95 flex-shrink-0" style={{ backgroundColor: color + '20', color }} translate="no">{section.label}</button>);
               })}
             </div>
           </div>
         )}
-        <div className="p-5 md:p-8">{renderLyrics()}</div>
+        <div className="p-5 md:p-8" translate="no">{renderLyrics()}</div>
       </div>
 
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-center gap-2">
