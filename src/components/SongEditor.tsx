@@ -9,6 +9,7 @@ import { ChevronLeft, Save, Trash2, Plus, X } from 'lucide-react';
 export default function SongEditor({ song, onBack }: { song: Song; onBack: () => void }) {
   const { state, updateCustomSong, removeCustomSong } = useApp();
   const { showNotification } = useNotification();
+  const isNewSong = song.id.startsWith('new-');
   const [title, setTitle] = useState(song.title);
   const [artist, setArtist] = useState(song.artist);
   const [key, setKey] = useState(song.key);
@@ -135,12 +136,14 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
           <ChevronLeft size={20} />
         </button>
         <div className="flex-1">
-          <h2 className="text-xl font-bold">Editar Canción</h2>
+          <h2 className="text-xl font-bold">{isNewSong ? 'Nueva Canción' : 'Editar Canción'}</h2>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{song.code}</p>
         </div>
-        <button onClick={handleDelete} className="p-2 rounded-xl text-red-500" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-          <Trash2 size={20} />
-        </button>
+        {!isNewSong && (
+          <button onClick={handleDelete} className="p-2 rounded-xl text-red-500" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+            <Trash2 size={20} />
+          </button>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -280,7 +283,7 @@ export default function SongEditor({ song, onBack }: { song: Song; onBack: () =>
         </div>
 
         <button onClick={handleSave} disabled={!title.trim()} className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>
-          <Save size={16} /> Guardar Cambios
+          <Save size={16} /> {isNewSong ? 'Crear Canción' : 'Guardar Cambios'}
         </button>
       </div>
     </div>

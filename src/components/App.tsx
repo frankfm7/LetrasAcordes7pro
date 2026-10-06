@@ -37,6 +37,7 @@ function AppContent() {
   const [showAddHymnalModal, setShowAddHymnalModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [addingSongToHymnal, setAddingSongToHymnal] = useState<Hymnal | null>(null);
 
   useEffect(() => {
     document.documentElement.className = state.preferences.theme;
@@ -119,10 +120,36 @@ function AppContent() {
     );
   }
 
+  if (addingSongToHymnal) {
+    const nextNumber = getNextSongNumber(addingSongToHymnal.id, [...allSongs, ...state.customSongs]);
+    const code = generateSongCode(addingSongToHymnal, nextNumber);
+    const newSong: Song = {
+      id: `new-${Date.now()}`,
+      title: '',
+      artist: '',
+      code,
+      number: nextNumber,
+      hymnalId: addingSongToHymnal.id,
+      key: 'C',
+      timeSignature: '4/4',
+      bpm: 120,
+      language: addingSongToHymnal.language.split('/')[0],
+      categories: [],
+      sections: [],
+      lyrics: '',
+      notes: '',
+    };
+    return (
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
+        <SongEditor song={newSong} onBack={() => setAddingSongToHymnal(null)} />
+      </Layout>
+    );
+  }
+
   if (selectedHymnal) {
     return (
       <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport}>
-        <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} showNotification={showNotification} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} />
+        <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onAddSong={(h: Hymnal) => setAddingSongToHymnal(h)} />
       </Layout>
     );
   }
@@ -267,21 +294,21 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal, onEditH
   return (
     <div className="space-y-6 pb-4">
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold flex items-center gap-2"><span>📚</span> Cancioneros</h2>
-          <button onClick={onAddHymnal} className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={14} /> Nuevo</button>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold flex items-center gap-2"><span>📚</span> Cancioneros</h2>
+          <button onClick={onAddHymnal} className="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 card-shadow-md hover:card-shadow-lg transition-all" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={14} /> Nuevo</button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {allHymnals.map((hymnal) => {
             const hymnalSongs = allAvailableSongs.filter(s => s.hymnalId === hymnal.id);
             return (
               <div key={hymnal.id} className="relative group">
-                <button onClick={() => onSelectHymnal(hymnal)} className="rounded-xl sm:rounded-2xl relative overflow-hidden p-2 sm:p-4 flex flex-col justify-between text-left transition-all hover:scale-[1.03] active:scale-[0.97] w-full" style={{ aspectRatio: '3/4', background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 4px 12px ${hymnal.color}44` }}>
-                  <div><div className="text-3xl sm:text-5xl mb-1 sm:mb-3">{hymnal.icon}</div><div className="text-white font-bold text-xs sm:text-lg leading-tight mb-1 sm:mb-2" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
-                  <div><div className="text-white/90 text-xs sm:text-sm font-semibold" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/70 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
+                <button onClick={() => onSelectHymnal(hymnal)} className="rounded-2xl relative overflow-hidden p-3 sm:p-5 flex flex-col justify-between text-left transition-all hover-lift active:scale-[0.97] w-full" style={{ aspectRatio: '3/4', background: `linear-gradient(135deg, ${hymnal.color}, ${hymnal.color}cc)`, boxShadow: `0 8px 24px ${hymnal.color}44, 0 2px 8px rgba(0,0,0,0.1)` }}>
+                  <div><div className="text-4xl sm:text-6xl mb-2 sm:mb-4 drop-shadow-lg">{hymnal.icon}</div><div className="text-white font-bold text-sm sm:text-xl leading-tight mb-1 sm:mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.9)' }}>{hymnal.name}</div></div>
+                  <div><div className="text-white/95 text-xs sm:text-base font-semibold" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>{hymnalSongs.length} canciones</div><div className="text-white/80 text-[10px] sm:text-xs" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.9)' }}>{hymnal.language}</div></div>
                 </button>
-                <button onClick={(e) => { e.stopPropagation(); onEditHymnal(hymnal); }} className="absolute top-1 right-1 p-1.5 rounded-lg bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Edit3 size={12} />
+                <button onClick={(e) => { e.stopPropagation(); onEditHymnal(hymnal); }} className="absolute top-2 right-2 p-2 rounded-xl bg-black/40 backdrop-blur-sm text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 card-shadow-md">
+                  <Edit3 size={14} />
                 </button>
               </div>
             );
@@ -289,19 +316,19 @@ function HomePage({ onSelectSong, onSelectHymnal, onSearch, onAddHymnal, onEditH
         </div>
       </section>
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold flex items-center gap-2">🎵 Destacadas</h2>
-          <button onClick={onSearch} className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>Ver todas →</button>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">🎵 Destacadas</h2>
+          <button onClick={onSearch} className="text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-opacity-10 transition-all" style={{ color: 'var(--accent)' }}>Ver todas →</button>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {featuredSongs.map((song) => (
-            <div key={song.id} className="flex items-center gap-3 p-3 rounded-2xl border transition-all hover:scale-[1.01]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)', boxShadow: 'var(--card-shadow)' }}>
+            <div key={song.id} className="flex items-center gap-3 p-4 rounded-2xl border card-shadow-sm hover:card-shadow-md transition-all hover-lift" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
               <button onClick={() => onSelectSong(song)} className="flex-1 text-left flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>{song.code.charAt(0)}</div>
-                <div className="flex-1 min-w-0"><div className="font-semibold text-sm truncate">{song.title}</div><div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.timeSignature}</div></div>
-                <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold card-shadow-sm" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>{song.code.charAt(0)}</div>
+                <div className="flex-1 min-w-0"><div className="font-semibold text-base truncate">{song.title}</div><div className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.timeSignature}</div></div>
+                <ChevronRight size={18} style={{ color: 'var(--text-muted)' }} />
               </button>
-              <button onClick={() => toggleFavorite(song.id)} className="p-2 rounded-xl" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={18} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
+              <button onClick={() => toggleFavorite(song.id)} className="p-2.5 rounded-xl hover:scale-110 transition-transform" style={{ color: isFavorite(song.id) ? 'var(--gold)' : 'var(--text-muted)' }}><Star size={20} fill={isFavorite(song.id) ? 'currentColor' : 'none'} /></button>
             </div>
           ))}
         </div>
@@ -501,58 +528,25 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
   );
 }
 
-function HymnalView({ hymnal, onSelectSong, onBack, showNotification, onEditHymnal }: any) {
-  const { state, toggleFavorite, isFavorite, addCustomSong } = useApp();
-  const [showAddSongModal, setShowAddSongModal] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newArtist, setNewArtist] = useState('');
-  const [newKey, setNewKey] = useState('C');
-  const [newLyrics, setNewLyrics] = useState('');
+function HymnalView({ hymnal, onSelectSong, onBack, onEditHymnal, onAddSong }: any) {
+  const { state, toggleFavorite, isFavorite } = useApp();
 
   const hymnalSongs = useMemo(() => {
     return [...allSongs, ...state.customSongs].filter(s => s.hymnalId === hymnal.id);
   }, [hymnal.id, state.customSongs]);
 
-  const handleAddSong = () => {
-    if (!newTitle.trim()) { showNotification('El título es obligatorio', 'error'); return; }
-    const nextNumber = getNextSongNumber(hymnal.id, [...allSongs, ...state.customSongs]);
-    const code = generateSongCode(hymnal, nextNumber);
-    const newSong: Song = {
-      id: `custom-${Date.now()}`,
-      title: newTitle.trim(),
-      artist: newArtist.trim() || 'Desconocido',
-      code,
-      number: nextNumber,
-      hymnalId: hymnal.id,
-      key: newKey,
-      timeSignature: '4/4',
-      bpm: 120,
-      language: hymnal.language.split('/')[0],
-      categories: [],
-      sections: [],
-      lyrics: newLyrics,
-      notes: '',
-    };
-    addCustomSong(newSong);
-    showNotification('Canción agregada', 'success');
-    setShowAddSongModal(false);
-    setNewTitle('');
-    setNewArtist('');
-    setNewLyrics('');
-  };
-
   return (
     <div className="space-y-4 pb-4">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={20} /></button>
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: hymnal.color + '20' }}>{hymnal.icon}</div>
+        <button onClick={onBack} className="p-2 rounded-lg card-shadow-sm hover:card-shadow-md transition-shadow" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={20} /></button>
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl card-shadow-lg" style={{ backgroundColor: hymnal.color + '20' }}>{hymnal.icon}</div>
         <div className="flex-1"><h2 className="text-lg font-bold">{hymnal.name}</h2><p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hymnalSongs.length} canciones • {hymnal.language}</p></div>
-        <button onClick={() => onEditHymnal(hymnal)} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Edit3 size={18} /></button>
-        <button onClick={() => setShowAddSongModal(true)} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={18} /></button>
+        <button onClick={() => onEditHymnal(hymnal)} className="p-2.5 rounded-xl card-shadow-sm hover:card-shadow-md transition-all" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Edit3 size={18} /></button>
+        <button onClick={() => onAddSong(hymnal)} className="p-2.5 rounded-xl card-shadow-md hover:card-shadow-lg transition-all" style={{ backgroundColor: 'var(--accent)', color: 'white' }}><Plus size={18} /></button>
       </div>
       <div className="space-y-2">
         {hymnalSongs.map(song => (
-          <div key={song.id} className="flex items-center gap-3 p-3 rounded-xl border transition-all hover:scale-[1.01]" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
+          <div key={song.id} className="flex items-center gap-3 p-3 rounded-xl border card-shadow-sm hover:card-shadow-md transition-all hover-lift" style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--border-color)' }}>
             <button onClick={() => onSelectSong(song)} className="flex-1 text-left">
               <div className="flex items-center gap-2"><span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--accent)' }}>{song.code}</span><span className="font-medium text-sm">{song.title}</span></div>
               <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{song.artist} • {song.key} • {song.timeSignature} • {song.bpm} BPM</div>
@@ -562,21 +556,6 @@ function HymnalView({ hymnal, onSelectSong, onBack, showNotification, onEditHymn
         ))}
         {hymnalSongs.length === 0 && <div className="text-center py-12"><Music size={40} style={{ color: 'var(--text-muted)' }} className="mx-auto mb-3" /><p className="text-sm" style={{ color: 'var(--text-muted)' }}>No hay canciones</p></div>}
       </div>
-
-      {showAddSongModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddSongModal(false)}>
-          <div className="w-full max-w-2xl rounded-2xl p-5 max-h-[90vh] overflow-y-auto space-y-4" style={{ backgroundColor: 'var(--card-bg)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="font-bold text-lg">Agregar Canción a {hymnal.name}</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="text-xs font-bold mb-1 block">Título *</label><input value={newTitle} onChange={e => setNewTitle(e.target.value)} className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} autoFocus /></div>
-              <div><label className="text-xs font-bold mb-1 block">Artista</label><input value={newArtist} onChange={e => setNewArtist(e.target.value)} className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} /></div>
-            </div>
-            <div><label className="text-xs font-bold mb-1 block">Tonalidad</label><select value={newKey} onChange={e => setNewKey(e.target.value)} className="w-full p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}>{['C','C#','D','D#','E','F','F#','G','G#','A','A#','B','Am','Bm','Cm','Dm','Em','Fm','Gm'].map(k => <option key={k} value={k}>{k}</option>)}</select></div>
-            <div><label className="text-xs font-bold mb-1 block">Letra y Acordes</label><textarea value={newLyrics} onChange={e => setNewLyrics(e.target.value)} rows={10} className="w-full p-3 rounded-xl border text-sm font-mono" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }} placeholder={`VERSO 1\n//G            Em          C          D\nLetra de la canción\n//G            Em          C          D\ncon acordes arriba`} /></div>
-            <div className="flex gap-2"><button onClick={() => setShowAddSongModal(false)} className="flex-1 py-3 rounded-xl font-medium" style={{ backgroundColor: 'var(--bg-tertiary)' }}>Cancelar</button><button onClick={handleAddSong} className="flex-1 py-3 rounded-xl font-bold" style={{ backgroundColor: 'var(--accent)', color: 'white' }}>Agregar</button></div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

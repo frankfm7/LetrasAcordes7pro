@@ -42,15 +42,7 @@ const defaultState: AppState = {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const loadCustomSongs = (): Song[] => {
-    try {
-      const saved = localStorage.getItem('cancionero-custom-songs');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  };
-
-  const initialState = { ...defaultState, customSongs: loadCustomSongs() };
-  const [state, setState] = useLocalStorage<AppState>('cancionero-ruah-state', initialState);
+  const [state, setState] = useLocalStorage<AppState>('cancionero-ruah-state', defaultState);
 
   useEffect(() => {
     if (!state.orders) setState(prev => ({ ...prev, orders: [] }));
@@ -120,51 +112,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateCustomHymnal = useCallback((hymnal: Hymnal) => {
     setState(prev => {
-      const exists = prev.customHymnals.some(h => h.id === hymnal.id);
-      const newCustomHymnals = exists ? prev.customHymnals.map(h => h.id === hymnal.id ? hymnal : h) : [...prev.customHymnals, hymnal];
-      return { ...prev, customHymnals: newCustomHymnals };
+      // Verificar si es un himnario predeterminado
+      const isDefault = hymnals.some(h => h.id === hymnal.id);
+      
+      if (isDefault) {
+        // Si es predeterminado, agregarlo a customHymnals (sobrescribe el predeterminado)
+        const existsInCustom = prev.customHymnals.some(h => h.id === hymnal.id);
+        const newCustomHymnals = existsInCustom 
+          ? prev.customHymnals.map(h => h.id === hymnal.id ? hymnal : h)
+          : [...prev.customHymnals, hymnal];
+        return { ...prev, customHymnals: newCustomHymnals };
+      } else {
+        // Si es custom, actualizarlo
+        const newCustomHymnals = prev.customHymnals.map(h => h.id === hymnal.id ? hymnal : h);
+        return { ...prev, customHymnals: newCustomHymnals };
+      }
     });
   }, [setState]);
 
   const addCustomSong = useCallback((song: Song) => {
     setState(prev => {
-      const newCustomSongs = [...prev.customSongs, song];
-      localStorage.setItem('cancionero-custom-songs', JSON.stringify(newCustomSongs));
-      return { ...prev, customSongs: newCustomSongs };
+      // Verificar si ya existe para evitar duplicados
+      const exists = prev.customSongs.some(s => s.id === song.id);
+      if (exists) {
+        // Actualizar si ya existe
+        const newCustomSongs = prev.customSongs.map(s => s.id === song.id ? song : s);
+        return { ...prev, customSongs: newCustomSongs };
+      }
+      // Agregar si no existe
+      return { ...prev, customSongs: [...prev.customSongs, song] };
     });
   }, [setState]);
 
   const addMultipleCustomSongs = useCallback((songs: Song[]) => {
     setState(prev => {
-      const newCustomSongs = [...prev.customSongs, ...songs];
-      localStorage.setItem('cancionero-custom-songs', JSON.stringify(newCustomSongs));
-      return { ...prev, customSongs: newCustomSongs };
+      const existingIds = new Set(prev.customSongs.map(s => s.id));
+      const newSongs = songs.filter(s => !existingIds.has(s.id));
+      return { ...prev, customSongs: [...prev.customSongs, ...newSongs] };
     });
   }, [setState]);
 
   const updateCustomSong = useCallback((song: Song) => {
     setState(prev => {
       const exists = prev.customSongs.some(s => s.id === song.id);
-      const newCustomSongs = exists ? prev.customSongs.map(s => s.id === song.id ? song : s) : [...prev.customSongs, song];
-      localStorage.setItem('cancionero-custom-songs', JSON.stringify(newCustomSongs));
+      const newCustomSongs = exists 
+        ? prev.customSongs.map(s => s.id === song.id ? song : s)
+        : [...prev.customSongs, song];
       return { ...prev, customSongs: newCustomSongs };
     });
   }, [setState]);
 
   const removeCustomSong = useCallback((id: string) => {
-    setState(prev => {
-      const newCustomSongs = prev.customSongs.filter(s => s.id !== id);
-      localStorage.setItem('cancionero-custom-songs', JSON.stringify(newCustomSongs));
-      return { ...prev, customSongs: newCustomSongs };
-    });
+    setState(prev => ({ ...prev, customSongs: prev.customSongs.filter(s => s.id !== id) }));
   }, [setState]);
 
   const removeMultipleCustomSongs = useCallback((ids: string[]) => {
-    setState(prev => {
-      const newCustomSongs = prev.customSongs.filter(s => !ids.includes(s.id));
-      localStorage.setItem('cancionero-custom-songs', JSON.stringify(newCustomSongs));
-      return { ...prev, customSongs: newCustomSongs };
-    });
+    setState(prev => ({ ...prev, customSongs: prev.customSongs.filter(s => !ids.includes(s.id)) }));
   }, [setState]);
 
   const addMultipleToFavorites = useCallback((ids: string[]) => {
