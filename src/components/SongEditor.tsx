@@ -45,8 +45,12 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
     // Si hay múltiples idiomas, guardar la letra actual en el idioma activo
     if (allLanguages.length > 1) {
       finalLyricsByLanguage[activeLanguageTab] = lyrics;
-      // Usar la letra del primer idioma como principal
-      finalLyrics = lyricsByLanguage[language] || lyrics;
+      // Asegurar que el idioma principal esté en lyricsByLanguage
+      if (!finalLyricsByLanguage[language]) {
+        finalLyricsByLanguage[language] = lyrics;
+      }
+      // Usar la letra del idioma principal como principal
+      finalLyrics = finalLyricsByLanguage[language] || lyrics;
     }
 
     if (key !== originalKey) {
@@ -97,8 +101,12 @@ export default function SongEditor({ song, onBack }: SongEditorProps) {
     }
     
     const updatedLyricsByLanguage = { ...lyricsByLanguage };
-    // Guardar la letra actual antes de cambiar
+    // Guardar la letra actual en el idioma activo
     updatedLyricsByLanguage[activeLanguageTab] = lyrics;
+    // Asegurar que el idioma principal también esté guardado
+    if (!updatedLyricsByLanguage[language]) {
+      updatedLyricsByLanguage[language] = lyrics;
+    }
     // Agregar el nuevo idioma con letra vacía
     updatedLyricsByLanguage[newLanguageName.trim()] = '';
     

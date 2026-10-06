@@ -656,6 +656,24 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       <div className="flex-shrink-0 flex items-center gap-2 mb-1">
         <button onClick={onBack} className="p-1.5 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><ChevronLeft size={16} /></button>
         <h1 className="flex-1 text-sm sm:text-base font-bold truncate">{song.title}</h1>
+        {song.lyricsByLanguage && Object.keys(song.lyricsByLanguage).length > 1 && (
+          <div className="flex gap-1">
+            {Object.keys(song.lyricsByLanguage).map(lang => (
+              <button
+                key={lang}
+                onClick={() => setCurrentLanguage(lang)}
+                className="px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all"
+                style={{
+                  backgroundColor: currentLanguage === lang ? 'var(--accent)' : 'var(--bg-tertiary)',
+                  color: currentLanguage === lang ? 'white' : 'var(--text-primary)',
+                  border: currentLanguage === lang ? '2px solid var(--accent)' : '2px solid transparent'
+                }}
+              >
+                {lang}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-shrink-0 flex items-center gap-2 mb-2">
@@ -665,32 +683,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           <span className="font-bold" style={{ color: 'var(--accent)' }} translate="no">{song.key}</span>
           <span translate="no">{song.timeSignature}</span>
           <span translate="no">{song.bpm} BPM</span>
-          {song.language && !song.lyricsByLanguage && (
-            <>
-              <span>•</span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}>
-                {song.language}
-              </span>
-            </>
-          )}
-          {song.lyricsByLanguage && Object.keys(song.lyricsByLanguage).length > 1 && (
-            <div className="flex gap-1 ml-2">
-              {Object.keys(song.lyricsByLanguage).map(lang => (
-                <button
-                  key={lang}
-                  onClick={() => setCurrentLanguage(lang)}
-                  className="px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all"
-                  style={{
-                    backgroundColor: currentLanguage === lang ? 'var(--accent)' : 'var(--bg-tertiary)',
-                    color: currentLanguage === lang ? 'white' : 'var(--text-primary)',
-                    border: currentLanguage === lang ? '2px solid var(--accent)' : '2px solid transparent'
-                  }}
-                >
-                  {lang}
-                </button>
-              ))}
-            </div>
-          )}
           <button
             onClick={() => setTransposition(0)}
             className="px-1.5 py-0.5 rounded text-xs font-medium transition-all hover:scale-105"
