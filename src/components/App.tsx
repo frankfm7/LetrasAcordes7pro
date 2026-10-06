@@ -433,7 +433,8 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
       const container = scrollContainerRef.current;
       scrollIntervalRef.current = window.setInterval(() => { 
         if (!scrollPauseRef.current) {
-          container.scrollTop += scrollSpeed / 20; 
+          // Fórmula ajustada para que todas las velocidades sean perceptibles
+          container.scrollTop += (scrollSpeed * 0.1) + 0.1; 
         }
       }, 50);
     } else { if (scrollIntervalRef.current) { clearInterval(scrollIntervalRef.current); scrollIntervalRef.current = null; } }
@@ -767,7 +768,6 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
               />
               <div className="flex justify-between text-[9px] text-white/50 mt-1">
                 <span>Lento</span>
-                <span>Rápido</span>
               </div>
             </div>
             
@@ -793,26 +793,17 @@ function SongView({ song: initialSong, onBack, onEdit, showNotification }: any) 
           </div>
         )}
         
-        {/* Botón de velocidad - más grande y transparente */}
+        {/* Botón de play/pause - más pequeño y transparente para móviles */}
         <button 
           onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-          className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95 text-sm font-bold"
-          style={{ backgroundColor: 'rgba(139, 92, 246, 0.5)', color: 'white', backdropFilter: 'blur(10px)' }}
-        >
-          {scrollSpeed}
-        </button>
-        
-        {/* Botón de play/pause - transparente */}
-        <button 
-          onClick={() => setIsAutoScrolling(!isAutoScrolling)} 
-          className="w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
+          className="w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95" 
           style={{ 
-            backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.5)' : 'rgba(124,58,237,0.5)', 
+            backgroundColor: isAutoScrolling ? 'rgba(239,68,68,0.4)' : 'rgba(124,58,237,0.4)', 
             color: 'white', 
             backdropFilter: 'blur(10px)' 
           }}
         >
-          {isAutoScrolling ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
+          {isAutoScrolling ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
         </button>
       </div>
 
