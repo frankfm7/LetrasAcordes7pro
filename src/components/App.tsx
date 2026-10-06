@@ -367,7 +367,7 @@ function Layout({ children, currentPage, onNavigate, onImport, onExport, onTools
       <main className="max-w-6xl mx-auto px-4 py-6 h-[calc(100vh-4rem-4rem)] overflow-y-auto">{children}</main>
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t backdrop-blur-xl" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-primary) 90%, transparent)', borderColor: 'var(--border-color)' }}>
         <div className="max-w-6xl mx-auto flex">
-          {[{ id: 'home', label: 'Inicio', icon: Home }, { id: 'search', label: 'Buscar', icon: Search }, { id: 'favorites', label: 'Favoritos', icon: Heart }, { id: 'setlists', label: 'Listas', icon: ListMusic }, { id: 'orders', label: 'Órdenes', icon: Music }, { id: 'tools', label: 'Tools', icon: Settings }].map(item => {
+          {[{ id: 'home', label: 'Inicio', icon: Home }, { id: 'search', label: 'Buscar', icon: Search }, { id: 'favorites', label: 'Favoritos', icon: Heart }, { id: 'setlists', label: 'Listas', icon: ListMusic }, { id: 'orders', label: 'Órdenes', icon: Music }, { id: 'tools', label: 'Menú+', icon: Settings }].map(item => {
             const isActive = currentPage === item.id;
             return (<button key={item.id} onClick={() => item.id === 'tools' ? onToolsClick() : onNavigate(item.id)} className={`flex-1 flex flex-col items-center py-3 px-1 transition-all ${isActive ? 'scale-105' : 'opacity-60'}`} style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)' }}><item.icon size={18} strokeWidth={isActive ? 2.5 : 1.5} /><span className="text-[9px] font-semibold mt-1">{item.label}</span>{isActive && <div className="absolute top-0 w-8 h-0.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />}</button>);
           })}
