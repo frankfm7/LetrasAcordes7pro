@@ -38,7 +38,7 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [selectedHymnal, setSelectedHymnal] = useState<Hymnal | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [editingSong, setEditingSong] = useState<Song | null>(null);
   const [showEditHymnalModal, setShowEditHymnalModal] = useState(false);
   const [editingHymnal, setEditingHymnal] = useState<Hymnal | null>(null);
@@ -69,7 +69,6 @@ function AppContent() {
     setCurrentPage(page);
     setSelectedSong(null);
     setSelectedHymnal(null);
-    setSidebarOpen(false);
     setEditingSong(null);
   }, []);
 
@@ -128,7 +127,7 @@ function AppContent() {
 
   if (showToolsMenu) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <ToolsMenu 
           onClose={() => setShowToolsMenu(false)} 
           onNavigate={handleNavigate}
@@ -151,7 +150,7 @@ function AppContent() {
 
   if (showProfilePage) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <ProfilePage onBack={() => setShowProfilePage(false)} />
       </Layout>
     );
@@ -162,7 +161,7 @@ function AppContent() {
     const allAvailableSongs = [...allSongs, ...state.customSongs];
     
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <ExportOptions
           onClose={() => setShowExportOptions(false)}
           songs={allAvailableSongs}
@@ -187,7 +186,7 @@ function AppContent() {
   if (showSongSelector) {
     const allAvailableSongs = [...allSongs, ...state.customSongs];
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongSelectorModal
           songs={allAvailableSongs}
           onClose={() => setShowSongSelector(false)}
@@ -199,7 +198,7 @@ function AppContent() {
   if (showMultiSongSelector) {
     const allAvailableSongs = [...allSongs, ...state.customSongs];
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <MultiSongSelector
           songs={allAvailableSongs}
           onClose={() => setShowMultiSongSelector(false)}
@@ -212,7 +211,7 @@ function AppContent() {
     const allHymnals = [...hymnals, ...state.customHymnals];
     const allAvailableSongs = [...allSongs, ...state.customSongs];
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <HymnalSelector
           hymnals={allHymnals}
           songs={allAvailableSongs}
@@ -226,7 +225,7 @@ function AppContent() {
     const allHymnals = [...hymnals, ...state.customHymnals];
     
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <ImportModal
           onClose={() => setShowImportModal(false)}
           hymnals={allHymnals}
@@ -237,7 +236,7 @@ function AppContent() {
 
   if (editingSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongEditor song={editingSong} onBack={() => setEditingSong(null)} />
       </Layout>
     );
@@ -245,7 +244,7 @@ function AppContent() {
 
   if (selectedSong) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongView song={selectedSong} onBack={handleBack} onEdit={() => setEditingSong(selectedSong)} showNotification={showNotification} />
       </Layout>
     );
@@ -271,7 +270,7 @@ function AppContent() {
       notes: '',
     };
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <SongEditor song={newSong} onBack={() => setAddingSongToHymnal(null)} />
       </Layout>
     );
@@ -279,7 +278,7 @@ function AppContent() {
 
   if (selectedHymnal) {
     return (
-      <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
         <HymnalView hymnal={selectedHymnal} onSelectSong={handleSelectSong} onBack={handleBack} onEditHymnal={(h: Hymnal) => { setEditingHymnal(h); setShowEditHymnalModal(true); }} onAddSong={(h: Hymnal) => setAddingSongToHymnal(h)} onDeleteHymnal={handleDeleteHymnal} showNotification={showNotification} />
         {showEditHymnalModal && editingHymnal && (
           <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setSelectedHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
@@ -301,7 +300,7 @@ function AppContent() {
   };
 
   return (
-    <Layout currentPage={currentPage} onNavigate={handleNavigate} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
+    <Layout currentPage={currentPage} onNavigate={handleNavigate} onImport={handleImport} onExport={handleExport} onToolsClick={() => setShowToolsMenu(true)}>
       {renderPage()}
       {showEditHymnalModal && editingHymnal && (
         <EditHymnalModal hymnal={editingHymnal} onClose={() => { setShowEditHymnalModal(false); setEditingHymnal(null); }} onSave={(h) => { updateCustomHymnal(h); setShowEditHymnalModal(false); setEditingHymnal(null); showNotification('Cancionero actualizado', 'success'); }} />
@@ -337,7 +336,7 @@ function AppContent() {
   );
 }
 
-function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen, onImport, onExport, onToolsClick }: any) {
+function Layout({ children, currentPage, onNavigate, onImport, onExport, onToolsClick }: any) {
   const { state, setTheme } = useApp();
   const menuItems = [
     { id: 'home', label: 'Inicio', icon: Home },
@@ -350,59 +349,11 @@ function Layout({ children, currentPage, onNavigate, sidebarOpen, setSidebarOpen
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
-      {sidebarOpen && (
-        <aside className="fixed left-0 top-0 bottom-0 z-50 w-80 flex flex-col" style={{ backgroundColor: 'var(--bg-primary)', borderRight: '1px solid var(--border-color)' }}>
-          <div className="p-6 border-b" style={{ borderColor: 'var(--border-color)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>7</div>
-                <div><h1 className="font-bold text-lg" style={{ color: 'var(--accent)' }}>Cancionero<span className="font-black">7Pro</span></h1><p className="text-xs" style={{ color: 'var(--text-muted)' }}>v1.0 Premium</p></div>
-              </div>
-              <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><X size={18} /></button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><div className="text-lg font-bold" style={{ color: 'var(--accent)' }}>{state.favorites.length}</div><div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Favoritos</div></div>
-              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><div className="text-lg font-bold" style={{ color: 'var(--accent)' }}>{state.setlists.length}</div><div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Listas</div></div>
-              <div className="text-center p-2 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}><div className="text-lg font-bold" style={{ color: 'var(--accent)' }}>{state.customSongs.length + allSongs.length}</div><div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Canciones</div></div>
-            </div>
-          </div>
-          <nav className="flex-1 p-4 overflow-y-auto">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-3" style={{ color: 'var(--text-muted)' }}>Navegación</p>
-            {menuItems.map(item => (
-              <button key={item.id} onClick={() => onNavigate(item.id)} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ backgroundColor: currentPage === item.id ? 'var(--accent-light)' : 'transparent', color: currentPage === item.id ? 'var(--accent)' : 'var(--text-primary)' }}>
-                <item.icon size={20} /><span className="font-medium text-sm">{item.label}</span>
-              </button>
-            ))}
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-3" style={{ color: 'var(--text-muted)' }}>Datos</p>
-              <button onClick={() => { onExport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ color: 'var(--text-primary)' }}>
-                <Download size={20} /><span className="font-medium text-sm">Exportar Respaldo</span>
-              </button>
-              <button onClick={() => { onImport(); setSidebarOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-all" style={{ color: 'var(--text-primary)' }}>
-                <Upload size={20} /><span className="font-medium text-sm">Importar Respaldo</span>
-              </button>
-            </div>
-          </nav>
-          <div className="p-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
-            <button onClick={() => setTheme(state.preferences.theme === 'dark' ? 'light' : 'dark')} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-              {state.preferences.theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}Modo {state.preferences.theme === 'dark' ? 'Claro' : 'Oscuro'}
-            </button>
-          </div>
-        </aside>
-      )}
       <header className="sticky top-0 z-30 backdrop-blur-xl border-b" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-primary) 85%, transparent)', borderColor: 'var(--border-color)' }}>
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Menu size={20} /></button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>C7</div>
-              <div><h1 className="text-sm sm:text-lg font-bold leading-tight" style={{ color: 'var(--accent)' }}>Cancionero<span className="font-black">7Pro</span></h1><p className="text-[9px] sm:text-[10px] leading-tight" style={{ color: 'var(--text-muted)' }}>Letras y Acordes</p></div>
-            </div>
-          </div>
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-center">
           <div className="flex items-center gap-2">
-            <button onClick={() => onNavigate('search')} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}><Search size={18} /></button>
-            <button onClick={() => setTheme(state.preferences.theme === 'dark' ? 'light' : 'dark')} className="p-2.5 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}>{state.preferences.theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>C7</div>
+            <div><h1 className="text-sm sm:text-lg font-bold leading-tight" style={{ color: 'var(--accent)' }}>Cancionero<span className="font-black">7Pro</span></h1></div>
           </div>
         </div>
       </header>
